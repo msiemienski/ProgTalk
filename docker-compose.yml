@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongo:
+    image: mongo:7.0
+    container_name: progtalk-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USER:-progtalk_user}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD:-progtalk_password}
+      MONGO_INITDB_DATABASE: progtalk
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+      - mongo-config:/data/configdb
+    networks:
+      - progtalk-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: progtalk-backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      MONGODB_URI: mongodb://${MONGODB_USER:-progtalk_user}:${MONGODB_PASSWORD:-progtalk_password}@mongo:27017/progtalk?authSource=admin
+      FRONTEND_URL: https://localhost:5173
+      SSL_KEY_PATH: /app/certs/server.key
+      SSL_CERT_PATH: /app/certs/server.cert
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - ./certs:/app/certs:ro
+    networks:
+      - progtalk-network
+    depends_on:
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('https').get('https://localhost:3000/api/health', {rejectUnauthorized: false}, (res) => process.exit(res.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend Vue App
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: progtalk-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: https://backend:3000/api
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - ./certs:/app/certs:ro
+    networks:
+      - progtalk-network
+    depends_on:
+      - backend
+    stdin_open: true
+    tty: true
+
+networks:
+  progtalk-network:
+    driver: bridge
+
+volumes:
+  mongo-data:
+    driver: local
+  mongo-config:
+    driver: local
