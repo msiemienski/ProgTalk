@@ -9,7 +9,8 @@ This directory contains SSL certificates for HTTPS/WSS development.
 **Windows (with OpenSSL installed):**
 ```powershell
 openssl genrsa -out server.key 2048
-openssl req -new -x509 -key server.key -out server.cert -days 365 -subj "/C=PL/ST=Poland/L=Warsaw/O=ProgTalk/OU=Development/CN=localhost"
+openssl req -new -x509 -key server.key -out server.cert -days 365 
+
 ```
 
 **Linux/Mac:**

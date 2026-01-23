@@ -7,7 +7,6 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import helmet from 'helmet';
 import connectDB from './config/db.js';
-import healthRouter from './routes/health.js';
 
 // Load environment variables
 dotenv.config();
@@ -29,7 +28,21 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
+import healthRouter from './routes/health.js';
+import authRouter from './routes/auth.js';
+import accountRouter from './routes/account.js';
+import usersRouter from './routes/users.js';
+import topicsRouter from './routes/topics.js';
+import postsRouter from './routes/posts.js';
+import adminRouter from './routes/admin.js';
+
 app.use('/api/health', healthRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/account', accountRouter);
+app.use('/api/users', usersRouter);
+app.use('/api/topics', topicsRouter);
+app.use('/api/posts', postsRouter);
+app.use('/api/admin', adminRouter);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -63,8 +76,8 @@ app.use((req, res) => {
 let server;
 try {
     // Try to load SSL certificates
-    const sslKey = fs.readFileSync(process.env.SSL_KEY_PATH || './certs/server.key');
-    const sslCert = fs.readFileSync(process.env.SSL_CERT_PATH || './certs/server.cert');
+    const sslKey = fs.readFileSync(process.env.SSL_KEY_PATH || '../certs/server.key');
+    const sslCert = fs.readFileSync(process.env.SSL_CERT_PATH || '../certs/server.cert');
 
     server = https.createServer({
         key: sslKey,

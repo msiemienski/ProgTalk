@@ -1,5 +1,7 @@
 Projekt_2025-2026.pdf
 tsw.md
+*.key
+*.cert
 
 node_modules/
 dist/

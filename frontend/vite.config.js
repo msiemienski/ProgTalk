@@ -16,12 +16,12 @@ export default defineConfig({
         },
         proxy: {
             '/api': {
-                target: 'https://backend:3000',
+                target: 'https://localhost:3000',
                 changeOrigin: true,
                 secure: false,
             },
             '/socket.io': {
-                target: 'wss://backend:3000',
+                target: 'wss://localhost:3000',
                 changeOrigin: true,
                 secure: false,
                 ws: true,
