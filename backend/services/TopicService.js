@@ -124,9 +124,12 @@ class TopicService {
             throw new Error('Topic not found');
         }
 
-        // Check if user can moderate
+        // Check if user can moderate or is admin
+        const User = mongoose.model('User');
+        const user = await User.findById(userId);
         const canModerate = await TopicModerator.canModerate(userId, topicId);
-        if (!canModerate) {
+
+        if (!canModerate && user.role !== 'admin') {
             throw new Error('User is not a moderator of this topic');
         }
 

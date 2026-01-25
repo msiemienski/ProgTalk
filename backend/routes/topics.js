@@ -106,10 +106,10 @@ router.get('/:id', optionalAuth, async (req, res) => {
 });
 
 /**
- * PUT /api/topics/:id
+ * PATCH /api/topics/:id
  * Update topic
  */
-router.put('/:id', authenticate, requireModerator, async (req, res) => {
+router.patch('/:id', authenticate, requireModerator, async (req, res) => {
     try {
         const { name, description, status } = req.body;
 
@@ -124,6 +124,39 @@ router.put('/:id', authenticate, requireModerator, async (req, res) => {
     } catch (error) {
         res.status(400).json({
             error: 'Topic Update Failed',
+            message: error.message,
+        });
+    }
+});
+
+/**
+ * POST /api/topics/:id/subtopics
+ * Create a subtopic for a specific topic
+ */
+router.post('/:id/subtopics', authenticate, async (req, res) => {
+    try {
+        const { name, description } = req.body;
+
+        // Validate name
+        const nameValidation = isValidTopicName(name);
+        if (!nameValidation.valid) {
+            return res.status(400).json({
+                error: 'Bad Request',
+                message: nameValidation.message,
+            });
+        }
+
+        const topic = await TopicService.createTopic(
+            name,
+            description,
+            req.params.id,
+            req.userId
+        );
+
+        res.status(201).json(topic);
+    } catch (error) {
+        res.status(400).json({
+            error: 'Subtopic Creation Failed',
             message: error.message,
         });
     }

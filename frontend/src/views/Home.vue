@@ -1,204 +1,210 @@
 <template>
   <div class="home">
-    <h2>Witaj w ProgTalk! 👋</h2>
-    <p class="subtitle">Społeczność programistów - dyskusje, tematy, kod</p>
-    
-    <div class="card health-check">
-      <h3>🏥 Status Serwera</h3>
+    <div class="hero card">
+      <h1>Witaj w ProgTalk! 👋</h1>
+      <p class="subtitle">Platforma dla programistów stworzona do dzielenia się wiedzą i kodem.</p>
       
-      <div v-if="loading" class="loading">
-        Sprawdzanie połączenia...
-      </div>
-      
-      <div v-else-if="error" class="error-message">
-        <p>❌ Błąd połączenia z serwerem</p>
-        <code>{{ error }}</code>
-        <button class="btn" @click="checkHealth" style="margin-top: 1rem;">
-          Spróbuj ponownie
-        </button>
-      </div>
-      
-      <div v-else-if="health" class="health-info">
-        <div class="health-row">
-          <span class="label">Status:</span>
-          <span :class="['status-badge', health.status === 'OK' ? 'success' : 'error']">
-            {{ health.status }}
-          </span>
-        </div>
-        
-        <div class="health-row">
-          <span class="label">Środowisko:</span>
-          <code>{{ health.environment }}</code>
-        </div>
-        
-        <div class="health-row">
-          <span class="label">Uptime:</span>
-          <code>{{ formatUptime(health.uptime) }}</code>
-        </div>
-        
-        <div class="health-row">
-          <span class="label">Baza danych:</span>
-          <span :class="['status-badge', health.database.connected ? 'success' : 'error']">
-            {{ health.database.state }}
-          </span>
-        </div>
-        
-        <div class="health-row">
-          <span class="label">Ostatnie sprawdzenie:</span>
-          <code>{{ new Date(health.timestamp).toLocaleString('pl-PL') }}</code>
-        </div>
-        
-        <button class="btn" @click="checkHealth" style="margin-top: 1rem;">
-          🔄 Odśwież
-        </button>
+      <div class="hero-actions" v-if="!isAuthenticated">
+        <router-link to="/register" class="btn primary btn-lg">Zarejestruj się</router-link>
+        <router-link to="/login" class="btn outline">Zaloguj się</router-link>
       </div>
     </div>
-    
-    <div class="card features">
-      <h3>✨ Funkcje (w przygotowaniu)</h3>
-      <ul>
-        <li>📝 Dyskusje programistyczne w tematach</li>
-        <li>🌳 Hierarchiczna struktura tematów</li>
-        <li>👥 System moderatorów</li>
-        <li>💬 Wpisy z kodem i znacznikami</li>
-        <li>🔐 Rejestracja i autoryzacja JWT</li>
-        <li>⚡ Real-time komunikacja przez WebSocket</li>
-      </ul>
-    </div>
+
+    <!-- Topics Discovery Section -->
+    <section class="section">
+      <div class="section-header">
+        <h2>🔥 Odkrywaj Tematy</h2>
+        <p>Przeglądaj główne kategorie dyskusji</p>
+      </div>
+
+      <div v-if="loading" class="loading-grid">
+        <div v-for="i in 3" :key="i" class="skeleton card"></div>
+      </div>
+
+      <div v-else-if="rootTopics.length > 0" class="topics-grid">
+        <div 
+          v-for="topic in rootTopics" 
+          :key="topic._id" 
+          class="topic-card card clickable"
+          @click="$router.push(`/topics/${topic._id}`)"
+        >
+          <div class="topic-icon">📂</div>
+          <div class="topic-info">
+            <h3>{{ topic.name }}</h3>
+            <p>{{ topic.description || 'Brak opisu.' }}</p>
+            <div class="topic-meta">
+              <span>{{ topic.subtopicCount }} podtematów</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-else class="empty-state card">
+        <p>Brak dostępnych tematów. Zaloguj się, aby stworzyć pierwszy!</p>
+      </div>
+    </section>
+
+    <!-- Health Check (Hidden by default, keep for debug if needed) -->
+    <details class="debug-section">
+      <summary>Status Serwera (Debug)</summary>
+      <div class="card health-info mt-2">
+         <div v-if="health" class="health-grid">
+           <span>Status: {{ health.status }}</span>
+           <span>Database: {{ health.database.connected ? 'OK' : 'ERROR' }}</span>
+         </div>
+         <button class="btn btn-sm" @click="checkHealth">Sprawdź połączenie</button>
+      </div>
+    </details>
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref, onMounted } from 'vue';
 import api from '../services/api';
+import authService from '../services/authService';
 
-export default {
-  name: 'Home',
-  
-  setup() {
-    const health = ref(null);
-    const loading = ref(false);
-    const error = ref(null);
-    
-    const checkHealth = async () => {
-      loading.value = true;
-      error.value = null;
-      
-      try {
-        const response = await api.get('/health');
-        health.value = response.data;
-      } catch (err) {
-        error.value = err.message;
-        console.error('Health check failed:', err);
-      } finally {
-        loading.value = false;
-      }
-    };
-    
-    const formatUptime = (seconds) => {
-      const hours = Math.floor(seconds / 3600);
-      const minutes = Math.floor((seconds % 3600) / 60);
-      const secs = Math.floor(seconds % 60);
-      return `${hours}h ${minutes}m ${secs}s`;
-    };
-    
-    onMounted(() => {
-      checkHealth();
-    });
-    
-    return {
-      health,
-      loading,
-      error,
-      checkHealth,
-      formatUptime,
-    };
-  },
+const health = ref(null);
+const loading = ref(false);
+const error = ref(null);
+const rootTopics = ref([]);
+const isAuthenticated = authService.isAuthenticated;
+
+const checkHealth = async () => {
+  try {
+    const response = await api.get('/health');
+    health.value = response.data;
+  } catch (err) {
+    error.value = err.message;
+  }
 };
+
+const fetchRootTopics = async () => {
+  loading.value = true;
+  try {
+    const res = await api.get('/topics');
+    rootTopics.value = res.data;
+  } catch (err) {
+    console.error('Fetch topics error:', err);
+  } finally {
+    loading.value = false;
+  }
+};
+
+onMounted(() => {
+  checkHealth();
+  fetchRootTopics();
+});
 </script>
 
 <style scoped>
 .home {
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-h2 {
-  font-size: 2.5rem;
-  margin-bottom: 0.5rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.subtitle {
-  font-size: 1.2rem;
-  color: #718096;
-  margin-bottom: 2rem;
-}
-
-.health-check {
-  margin-bottom: 2rem;
-}
-
-.health-check h3 {
-  margin-top: 0;
-}
-
-.loading {
-  text-align: center;
-  padding: 2rem;
-  color: #718096;
-}
-
-.error-message {
-  padding: 1rem;
-  background: #fed7d7;
-  border-radius: 6px;
-  color: #742a2a;
-}
-
-.error-message code {
-  display: block;
-  margin-top: 0.5rem;
-  background: white;
-  padding: 0.5rem;
-  border-radius: 4px;
-}
-
-.health-info {
-  padding: 1rem 0;
-}
-
-.health-row {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid #e2e8f0;
+  flex-direction: column;
+  gap: 3rem;
 }
 
-.health-row:last-child {
-  border-bottom: none;
+.hero {
+  padding: 4rem 2rem;
+  text-align: center;
+  background: linear-gradient(rgba(255,255,255,0.9), rgba(255,255,255,0.9)), url('https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=1000') center/cover;
 }
 
-.health-row .label {
+.hero h1 {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.hero .subtitle {
+  font-size: 1.25rem;
+  color: var(--text-muted);
+  margin-bottom: 2.5rem;
+}
+
+.hero-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.btn-lg {
+  padding: 0.75rem 2rem;
+  font-size: 1.1rem;
+}
+
+.btn.outline {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+}
+
+.btn.outline:hover {
+  background: var(--bg-hover);
+}
+
+.section-header {
+  margin-bottom: 2rem;
+}
+
+.section-header h2 {
+  margin-bottom: 0.5rem;
+}
+
+.topics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.topic-card {
+  display: flex;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.topic-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px -5px rgba(0,0,0,0.1);
+}
+
+.topic-icon {
+  font-size: 2.5rem;
+}
+
+.topic-info h3 {
+  margin: 0 0 0.5rem 0;
+  color: var(--primary-color);
+}
+
+.topic-info p {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+.topic-meta {
+  font-size: 0.8rem;
   font-weight: 600;
-  color: #4a5568;
+  text-transform: uppercase;
+  color: var(--secondary-color);
 }
 
-.features ul {
-  list-style: none;
-  padding: 0;
+.debug-section {
+  margin-top: 4rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
 }
 
-.features li {
-  padding: 0.75rem 0;
-  border-bottom: 1px solid #e2e8f0;
+.skeleton {
+  height: 150px;
+  background: #f1f5f9;
+  animation: pulse 1.5s infinite;
 }
 
-.features li:last-child {
-  border-bottom: none;
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
 }
 </style>

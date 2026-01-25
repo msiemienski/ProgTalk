@@ -173,4 +173,89 @@ router.get('/actions/:targetType/:targetId', async (req, res) => {
     }
 });
 
+/**
+ * POST /api/admin/topics/:id/close
+ * Close a topic to new posts
+ */
+router.post('/topics/:id/close', async (req, res) => {
+    try {
+        const topic = await UserService.getUser(req.userId); // Check admin status via middleware already
+        const TopicService = (await import('../services/TopicService.js')).default;
+
+        const updated = await TopicService.updateTopic(req.params.id, req.userId, { status: 'closed' });
+
+        // Log admin action
+        await AdminAction.logAction(
+            req.userId,
+            'close_topic',
+            'Topic',
+            req.params.id,
+            { name: updated.name }
+        );
+
+        res.json({ message: 'Topic closed successfully', topic: updated });
+    } catch (error) {
+        res.status(400).json({
+            error: 'Operation Failed',
+            message: error.message,
+        });
+    }
+});
+
+/**
+ * POST /api/admin/topics/:id/hide
+ * Hide a topic from users
+ */
+router.post('/topics/:id/hide', async (req, res) => {
+    try {
+        const TopicService = (await import('../services/TopicService.js')).default;
+
+        const updated = await TopicService.updateTopic(req.params.id, req.userId, { status: 'hidden' });
+
+        // Log admin action
+        await AdminAction.logAction(
+            req.userId,
+            'hide_topic',
+            'Topic',
+            req.params.id,
+            { name: updated.name }
+        );
+
+        res.json({ message: 'Topic hidden successfully', topic: updated });
+    } catch (error) {
+        res.status(400).json({
+            error: 'Operation Failed',
+            message: error.message,
+        });
+    }
+});
+
+/**
+ * POST /api/admin/topics/:id/unhide
+ * Restore a hidden topic
+ */
+router.post('/topics/:id/unhide', async (req, res) => {
+    try {
+        const TopicService = (await import('../services/TopicService.js')).default;
+
+        const updated = await TopicService.updateTopic(req.params.id, req.userId, { status: 'active' });
+
+        // Log admin action
+        await AdminAction.logAction(
+            req.userId,
+            'unhide_topic',
+            'Topic',
+            req.params.id,
+            { name: updated.name }
+        );
+
+        res.json({ message: 'Topic restored successfully', topic: updated });
+    } catch (error) {
+        res.status(400).json({
+            error: 'Operation Failed',
+            message: error.message,
+        });
+    }
+});
+
 export default router;

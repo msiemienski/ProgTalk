@@ -8,10 +8,12 @@ class AuthService {
      * Generate access and refresh tokens
      */
     async generateTokens(user, ipAddress) {
+        const userId = user.id || user._id;
+
         // Generate access token (short-lived)
         const accessToken = jwt.sign(
             {
-                userId: user._id,
+                userId,
                 email: user.email,
                 role: user.role,
                 status: user.status,
@@ -28,7 +30,7 @@ class AuthService {
         // Store refresh token in database
         const refreshToken = await RefreshToken.create({
             token: refreshTokenString,
-            userId: user._id,
+            userId,
             expiresAt: refreshTokenExpiry,
             createdByIp: ipAddress,
         });
