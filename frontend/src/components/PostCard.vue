@@ -15,11 +15,21 @@
       <div class="post-actions">
         <!-- Moderation Actions -->
         <template v-if="canModerate && !isAuthor">
-          <button class="btn btn-sm secondary outline" @click="$emit('promote', post.authorId)" title="Promuj na moderatora">
-            Pozwól moderować
+          <button 
+            class="btn btn-sm outline" 
+            :class="isMod ? 'danger' : 'secondary'"
+            @click="$emit('promote', post.authorId)" 
+            :title="isMod ? 'Odbierz uprawnienia' : 'Promuj na moderatora'"
+          >
+            {{ isMod ? 'Zabierz uprawnienia' : 'Pozwól moderować' }}
           </button>
-          <button class="btn btn-sm danger outline" @click="$emit('block', post.authorId)" title="Zablokuj w tym temacie">
-            Blokuj
+          <button 
+            class="btn btn-sm outline" 
+            :class="isBlocked ? 'secondary' : 'danger'"
+            @click="$emit('block', post.authorId)" 
+            :title="isBlocked ? 'Odblokuj użytkownika' : 'Zablokuj w tym temacie'"
+          >
+            {{ isBlocked ? 'Odblokuj' : 'Blokuj' }}
           </button>
         </template>
 
@@ -38,7 +48,7 @@
             <span class="lang-badge">{{ block.language }}</span>
             <span v-if="block.caption" class="caption">{{ block.caption }}</span>
           </div>
-          <pre><code>{{ block.code }}</code></pre>
+          <pre><code ref="codeElements" :class="'language-' + block.language">{{ block.code }}</code></pre>
         </div>
       </div>
 
@@ -55,8 +65,8 @@
     </div>
 
     <div class="post-footer">
-      <div class="stat">
-        <span class="icon">👍</span>
+      <div class="stat clickable" :class="{ 'has-liked': post.hasLiked }" @click="$emit('toggle-like', post._id)">
+        <span class="icon">{{ post.hasLiked ? '❤️' : '👍' }}</span>
         <span>{{ post.likeCount || 0 }}</span>
       </div>
       <div v-if="post.referencedPosts?.length" class="referenced-meta">
@@ -67,8 +77,9 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, onMounted, ref, watch, nextTick } from 'vue';
 import authService from '../services/authService';
+import hljs from 'highlight.js';
 
 const props = defineProps({
   post: {
@@ -78,10 +89,33 @@ const props = defineProps({
   canModerate: {
     type: Boolean,
     default: false
+  },
+  isMod: {
+    type: Boolean,
+    default: false
+  },
+  isBlocked: {
+    type: Boolean,
+    default: false
   }
 });
 
-const emit = defineEmits(['delete', 'promote', 'block']);
+const emit = defineEmits(['delete', 'promote', 'block', 'toggle-like']);
+
+const codeElements = ref([]);
+
+const highlightAll = () => {
+  nextTick(() => {
+    if (codeElements.value) {
+      codeElements.value.forEach((el) => {
+        hljs.highlightElement(el);
+      });
+    }
+  });
+};
+
+onMounted(highlightAll);
+watch(() => props.post, highlightAll, { deep: true });
 
 const user = authService.user;
 const isAdmin = authService.isAdmin;
@@ -155,6 +189,23 @@ const formatDate = (dateStr) => {
 
 .btn.outline:hover {
   background: rgba(0, 0, 0, 0.05);
+}
+
+.stat.clickable {
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.stat.clickable:active {
+  transform: scale(0.9);
+}
+
+.stat.has-liked {
+  color: #ef4444;
+}
+
+.stat.has-liked .icon {
+  text-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
 }
 
 .author-info {

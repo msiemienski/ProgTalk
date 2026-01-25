@@ -1,9 +1,11 @@
+import mongoose from 'mongoose';
 import Post from '../models/Post.js';
 import PostLike from '../models/PostLike.js';
 import Topic from '../models/Topic.js';
 import TopicBlock from '../models/TopicBlock.js';
 import TopicModerator from '../models/TopicModerator.js';
 import Tag from '../models/Tag.js';
+import sanitizeHtml from 'sanitize-html';
 
 class PostService {
     /**
@@ -32,12 +34,25 @@ class PostService {
 
         console.log(`[DEBUG] createPost checks passed. Creating document...`);
 
+        // Sanitize content (XSS protection)
+        const sanitizedContent = sanitizeHtml(content, {
+            allowedTags: [], // No HTML allowed in raw content for now, we use standard interpolation
+            allowedAttributes: {}
+        });
+
+        // Basic validation/cleaning for code blocks
+        const validCodeBlocks = codeBlocks.map(block => ({
+            language: block.language || 'plaintext',
+            code: block.code || '',
+            caption: block.caption ? sanitizeHtml(block.caption, { allowedTags: [], allowedAttributes: {} }) : ''
+        }));
+
         // Create post
         const post = await Post.create({
             topicId,
             authorId,
-            content,
-            codeBlocks,
+            content: sanitizedContent,
+            codeBlocks: validCodeBlocks,
             tags,
             referencedPosts,
         });

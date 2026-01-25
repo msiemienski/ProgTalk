@@ -321,6 +321,22 @@ router.delete('/:id/blocks/:userId', authenticate, async (req, res) => {
 });
 
 /**
+ * GET /api/topics/:id/blocks
+ * Get all blocks in a topic
+ */
+router.get('/:id/blocks', authenticate, async (req, res) => {
+    try {
+        const blocks = await TopicService.getTopicBlocks(req.params.id, req.userId);
+        res.json(blocks);
+    } catch (error) {
+        res.status(500).json({
+            error: 'Failed to fetch blocks',
+            message: error.message,
+        });
+    }
+});
+
+/**
  * GET /api/topics/:id/access/:userId
  * Check user access (debug)
  */

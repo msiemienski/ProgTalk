@@ -66,6 +66,22 @@
         <!-- Blocking Section -->
         <div v-if="isModerator" class="moderators-section">
           <h3>Blokady</h3>
+          <div class="mod-list">
+            <div v-for="block in blockedUsers" :key="block._id" class="mod-item">
+              <span class="mod-name" :title="block.userId?.email">
+                {{ block.userId?.profile?.name || block.userId?.email?.split('@')[0] }}
+              </span>
+              <button 
+                class="btn-icon danger" 
+                @click="handleQuickBlock(block.userId)"
+                title="Odblokuj"
+              >
+                &times;
+              </button>
+            </div>
+            <div v-if="blockedUsers.length === 0" class="empty-state mini">Brak blokad.</div>
+          </div>
+
           <div v-if="!showBlockForm">
             <button class="btn secondary btn-sm full-width" @click="showBlockForm = true">
               + Zablokuj Użytkownika
@@ -192,9 +208,12 @@
                 :key="post._id" 
                 :post="post"
                 :can-moderate="isModerator"
+                :is-mod="checkAuthorModStatus(post.authorId)"
+                :is-blocked="checkAuthorBlockStatus(post.authorId)"
                 @delete="handleDeletePost"
                 @promote="handlePromoteUser"
                 @block="handleQuickBlock"
+                @toggle-like="handleLikePost"
               />
 
               <!-- Pagination Info/Controls -->
@@ -283,6 +302,7 @@ const blockForm = reactive({
   exceptions: []
 });
 const userAccess = ref(null);
+const blockedUsers = ref([]);
 
 const isModerator = computed(() => {
   if (authService.isAdmin.value) return true;
@@ -342,6 +362,7 @@ const handleCreatePost = async (payload) => {
     showPostForm.value = false;
     pagination.page = 1;
     fetchPosts(topicId.value);
+    fetchTopicData(topicId.value);
   } catch (err) {
     toastService.error(err.response?.data?.message || 'Błąd publikacji posta');
   }
@@ -359,34 +380,80 @@ const handleDeletePost = async (postId) => {
 };
 
 const handlePromoteUser = async (userObj) => {
+  const userId = userObj._id || userObj;
   const email = userObj.email;
+  
   if (!email) return;
   
-  if (!confirm(`Czy na pewno chcesz nadać uprawnienia moderacji użytkownikowi ${email}?`)) return;
+  const existingMod = moderators.value.find(m => m.userId === userId && m.type === 'direct');
   
-  try {
-    await api.post(`/topics/${topicId.value}/moderators`, { email });
-    toastService.success(`Użytkownik ${email} został moderatorem.`);
-    const modRes = await api.get(`/topics/${topicId.value}/moderators`);
-    moderators.value = modRes.data;
-  } catch (err) {
-    toastService.error(err.response?.data?.message || 'Błąd nadawania uprawnień');
+  if (existingMod) {
+    if (!confirm(`Czy na pewno chcesz odebrać uprawnienia moderacji użytkownikowi ${email}?`)) return;
+    try {
+      await api.delete(`/topics/${topicId.value}/moderators/${userId}`);
+      toastService.success(`Uprawnienia odebrane.`);
+      const modRes = await api.get(`/topics/${topicId.value}/moderators`);
+      moderators.value = modRes.data;
+    } catch (err) {
+      toastService.error(err.response?.data?.message || 'Błąd odbierania uprawnień');
+    }
+  } else {
+    if (!confirm(`Czy na pewno chcesz nadać uprawnienia moderacji użytkownikowi ${email}?`)) return;
+    try {
+      await api.post(`/topics/${topicId.value}/moderators`, { email });
+      toastService.success(`Użytkownik ${email} został moderatorem.`);
+      const modRes = await api.get(`/topics/${topicId.value}/moderators`);
+      moderators.value = modRes.data;
+    } catch (err) {
+      toastService.error(err.response?.data?.message || 'Błąd nadawania uprawnień');
+    }
   }
 };
 
 const handleQuickBlock = async (userObj) => {
+  const userId = userObj._id || userObj;
   const email = userObj.email;
   if (!email) return;
 
-  const reason = prompt(`Zablokować użytkownika ${email}? Podaj powód (opcjonalnie):`);
-  if (reason === null) return; // Cancelled prompt
-  
+  const existingBlock = blockedUsers.value.find(b => b.userId?._id === userId || b.userId === userId);
+
+  if (existingBlock) {
+    if (!confirm(`Odblokować użytkownika ${email}?`)) return;
+    try {
+      await api.delete(`/topics/${topicId.value}/blocks/${userId}`);
+      toastService.success(`Użytkownik ${email} został odblokowany.`);
+      fetchBlocks(topicId.value);
+    } catch (err) {
+      toastService.error(err.response?.data?.message || 'Błąd odblokowywania użytkownika');
+    }
+  } else {
+    const reason = prompt(`Zablokować użytkownika ${email}? Podaj powód (opcjonalnie):`);
+    if (reason === null) return; 
+    
+    try {
+      await api.post(`/topics/${topicId.value}/blocks`, { email, reason });
+      toastService.success(`Użytkownik ${email} został zablokowany.`);
+      fetchBlocks(topicId.value);
+    } catch (err) {
+      toastService.error(err.response?.data?.message || 'Błąd blokowania użytkownika');
+    }
+  }
+};
+
+const handleLikePost = async (postId) => {
+  if (!isAuthenticated.value) {
+    toastService.info('Zaloguj się, aby polubić post.');
+    return;
+  }
   try {
-    await api.post(`/topics/${topicId.value}/blocks`, { email, reason });
-    toastService.success(`Użytkownik ${email} został zablokowany.`);
-    fetchTopicData(topicId.value); // Refresh access/counts if needed
+    const res = await api.post(`/posts/${postId}/like`);
+    const post = posts.value.find(p => p._id === postId);
+    if (post) {
+      post.hasLiked = res.data.liked;
+      post.likeCount = res.data.likeCount;
+    }
   } catch (err) {
-    toastService.error(err.response?.data?.message || 'Błąd blokowania użytkownika');
+    toastService.error('Błąd przy polubieniu posta');
   }
 };
 
@@ -427,6 +494,16 @@ const fetchTree = async () => {
   }
 };
 
+const fetchBlocks = async (id) => {
+  if (!isModerator.value) return;
+  try {
+    const res = await api.get(`/topics/${id}/blocks`);
+    blockedUsers.value = res.data;
+  } catch (err) {
+    console.error('Fetch blocks error:', err);
+  }
+};
+
 const fetchTopicData = async (id) => {
   if (!id) return;
   loadingTopic.value = true;
@@ -458,6 +535,11 @@ const fetchTopicData = async (id) => {
 
     // Also fetch posts for this topic
     fetchPosts(id);
+
+    // Fetch blocks if user is moderator
+    if (isModerator.value) {
+      fetchBlocks(id);
+    }
   } catch (err) {
     console.error('Fetch topic data error:', err);
   } finally {
@@ -497,6 +579,16 @@ const deleteTopic = async () => {
 
 const navigateToTopic = (id) => {
   router.push(`/topics/${id}`);
+};
+
+const checkAuthorModStatus = (authorId) => {
+  const aid = authorId._id || authorId;
+  return moderators.value.some(m => m.userId === aid && m.type === 'direct');
+};
+
+const checkAuthorBlockStatus = (authorId) => {
+  const aid = authorId._id || authorId;
+  return blockedUsers.value.some(b => b.userId?._id === aid || b.userId === aid);
 };
 
 watch(() => route.params.id, (newId) => {

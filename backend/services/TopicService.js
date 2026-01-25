@@ -490,6 +490,27 @@ class TopicService {
     }
 
     /**
+     * Get all blocks for a topic
+     */
+    async getTopicBlocks(topicId, requestingUserId) {
+        const TopicBlock = (await import('../models/TopicBlock.js')).default;
+        const User = mongoose.model('User');
+
+        // Check permission
+        const canModerate = await TopicModerator.canModerate(requestingUserId, topicId);
+        const requestor = await User.findById(requestingUserId);
+
+        if (!canModerate && requestor.role !== 'admin') {
+            throw new Error('You do not have permission to view blocks in this topic');
+        }
+
+        return await TopicBlock.find({ topicId })
+            .populate('userId', 'email profile')
+            .populate('blockedBy', 'email profile')
+            .sort({ blockedAt: -1 });
+    }
+
+    /**
      * Unblock user in a topic
      */
     async unblockUser(topicId, targetUserId, requestingUserId) {
