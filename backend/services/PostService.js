@@ -3,27 +3,34 @@ import PostLike from '../models/PostLike.js';
 import Topic from '../models/Topic.js';
 import TopicBlock from '../models/TopicBlock.js';
 import TopicModerator from '../models/TopicModerator.js';
+import Tag from '../models/Tag.js';
 
 class PostService {
     /**
      * Create a new post
      */
     async createPost(topicId, authorId, content, codeBlocks = [], tags = [], referencedPosts = []) {
+        console.log(`[DEBUG] createPost for topic: ${topicId}, author: ${authorId}`);
         const topic = await Topic.findById(topicId);
         if (!topic) {
+            console.log(`[DEBUG] createPost failed: Topic not found`);
             throw new Error('Topic not found');
         }
 
         // Check if topic is active
         if (topic.status !== 'active') {
+            console.log(`[DEBUG] createPost failed: Topic status is ${topic.status}`);
             throw new Error('Cannot post in a closed or hidden topic');
         }
 
         // Check if user is blocked
         const isBlocked = await TopicBlock.isUserBlocked(authorId, topicId);
         if (isBlocked) {
+            console.log(`[DEBUG] createPost failed: User is blocked`);
             throw new Error('You are blocked from posting in this topic');
         }
+
+        console.log(`[DEBUG] createPost checks passed. Creating document...`);
 
         // Create post
         const post = await Post.create({

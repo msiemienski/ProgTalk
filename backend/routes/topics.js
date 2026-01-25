@@ -1,6 +1,7 @@
 import express from 'express';
 import TopicService from '../services/TopicService.js';
-import { authenticate, requireModerator, optionalAuth } from '../middleware/auth.js';
+import PostService from '../services/PostService.js';
+import { authenticate, requireModerator, optionalAuth, requireNotBlocked } from '../middleware/auth.js';
 import { isValidTopicName, validatePagination } from '../utils/validators.js';
 
 const router = express.Router();
@@ -330,6 +331,58 @@ router.get('/:id/access/:userId', optionalAuth, async (req, res) => {
     } catch (error) {
         res.status(500).json({
             error: 'Failed to check access',
+            message: error.message,
+        });
+    }
+});
+
+/**
+ * GET /api/topics/:id/posts
+ * Get posts in a topic (paginated)
+ */
+router.get('/:id/posts', optionalAuth, async (req, res) => {
+    try {
+        const { page, limit } = validatePagination(req.query.page, req.query.limit);
+
+        const result = await PostService.getTopicPosts(req.params.id, req.userId, page, limit);
+
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({
+            error: 'Failed to fetch posts',
+            message: error.message,
+        });
+    }
+});
+
+/**
+ * POST /api/topics/:id/posts
+ * Create a new post
+ */
+router.post('/:id/posts', authenticate, requireNotBlocked, async (req, res) => {
+    try {
+        const { content, codeBlocks, tags, referencedPosts } = req.body;
+
+        if (!content || content.trim().length === 0) {
+            return res.status(400).json({
+                error: 'Bad Request',
+                message: 'Post content is required',
+            });
+        }
+
+        const post = await PostService.createPost(
+            req.params.id,
+            req.userId,
+            content,
+            codeBlocks || [],
+            tags || [],
+            referencedPosts || []
+        );
+
+        res.status(201).json(post);
+    } catch (error) {
+        res.status(400).json({
+            error: 'Post Creation Failed',
             message: error.message,
         });
     }

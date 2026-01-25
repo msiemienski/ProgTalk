@@ -161,16 +161,63 @@
             </div>
           </div>
 
-          <!-- Post List Placeholder -->
+          <!-- Posts Section -->
           <div class="posts-section">
             <div class="section-header">
-              <h3>Posty</h3>
-              <button class="btn primary btn-sm" v-if="isAuthenticated && topic.status === 'active'">
-                Nowy Post
+              <h3>Posty ({{ pagination.total }})</h3>
+              <button 
+                class="btn primary btn-sm" 
+                v-if="isAuthenticated && topic.status === 'active'"
+                @click="showPostForm = !showPostForm"
+              >
+                {{ showPostForm ? 'Anuluj' : 'Nowy Post' }}
               </button>
             </div>
+
+            <!-- Post Creation Form -->
+            <transition name="fade">
+              <PostCreateForm 
+                v-if="showPostForm" 
+                :topic-id="topicId"
+                @success="handleCreatePost"
+                @cancel="showPostForm = false"
+              />
+            </transition>
             
-            <div class="empty-posts">
+            <div v-if="loadingPosts" class="loading-state">Pobieranie wpisów...</div>
+            
+            <div v-else-if="posts.length > 0" class="posts-list">
+              <PostCard 
+                v-for="post in posts" 
+                :key="post._id" 
+                :post="post"
+                :can-moderate="isModerator"
+                @delete="handleDeletePost"
+                @promote="handlePromoteUser"
+                @block="handleQuickBlock"
+              />
+
+              <!-- Pagination Info/Controls -->
+              <div class="pagination-controls" v-if="pagination.pages > 1">
+                <button 
+                  class="btn secondary btn-sm" 
+                  :disabled="pagination.page === 1"
+                  @click="changePage(pagination.page - 1)"
+                >
+                  Poprzednia
+                </button>
+                <span class="page-info">Strona {{ pagination.page }} z {{ pagination.pages }}</span>
+                <button 
+                  class="btn secondary btn-sm" 
+                  :disabled="pagination.page === pagination.pages"
+                  @click="changePage(pagination.page + 1)"
+                >
+                  Następna
+                </button>
+              </div>
+            </div>
+
+            <div v-else class="empty-posts">
                <div class="icon">💬</div>
                <p>W tym temacie nie ma jeszcze żadnych postów.</p>
                <p class="text-muted">Bądź pierwszy i rozpocznij dyskusję!</p>
@@ -189,6 +236,8 @@ import api from '../services/api';
 import authService from '../services/authService';
 import toastService from '../services/toastService';
 import TopicTree from '../components/TopicTree.vue';
+import PostCard from '../components/PostCard.vue';
+import PostCreateForm from '../components/PostCreateForm.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -200,6 +249,24 @@ const subtopics = ref([]);
 const path = ref([]);
 const loadingTree = ref(false);
 const loadingTopic = ref(false);
+
+// Subtopic creation state
+const showCreateForm = ref(false);
+const newSubtopic = reactive({
+  name: '',
+  description: ''
+});
+const creating = ref(false);
+
+const posts = ref([]);
+const loadingPosts = ref(false);
+const showPostForm = ref(false);
+const pagination = reactive({
+  page: 1,
+  total: 0,
+  pages: 1,
+  limit: 10
+});
 const isAuthenticated = authService.isAuthenticated;
 const user = authService.user;
 const moderators = ref([]);
@@ -250,6 +317,84 @@ const blockUser = async () => {
   } finally {
     blocking.value = false;
   }
+};
+
+const fetchPosts = async (topicId) => {
+  loadingPosts.value = true;
+  try {
+    const res = await api.get(`/topics/${topicId}/posts`, {
+      params: { page: pagination.page, limit: pagination.limit }
+    });
+    posts.value = res.data.posts;
+    Object.assign(pagination, res.data.pagination);
+  } catch (err) {
+    console.error('Fetch posts error:', err);
+    toastService.error('Błąd pobierania wpisów');
+  } finally {
+    loadingPosts.value = false;
+  }
+};
+
+const handleCreatePost = async (payload) => {
+  try {
+    await api.post(`/topics/${topicId.value}/posts`, payload);
+    toastService.success('Post opublikowany!');
+    showPostForm.value = false;
+    pagination.page = 1;
+    fetchPosts(topicId.value);
+  } catch (err) {
+    toastService.error(err.response?.data?.message || 'Błąd publikacji posta');
+  }
+};
+
+const handleDeletePost = async (postId) => {
+  if (!confirm('Czy na pewno chcesz usunąć ten post?')) return;
+  try {
+    await api.delete(`/posts/${postId}`);
+    toastService.success('Post został usunięty.');
+    fetchPosts(topicId.value);
+  } catch (err) {
+    toastService.error(err.response?.data?.message || 'Błąd usuwania posta');
+  }
+};
+
+const handlePromoteUser = async (userObj) => {
+  const email = userObj.email;
+  if (!email) return;
+  
+  if (!confirm(`Czy na pewno chcesz nadać uprawnienia moderacji użytkownikowi ${email}?`)) return;
+  
+  try {
+    await api.post(`/topics/${topicId.value}/moderators`, { email });
+    toastService.success(`Użytkownik ${email} został moderatorem.`);
+    const modRes = await api.get(`/topics/${topicId.value}/moderators`);
+    moderators.value = modRes.data;
+  } catch (err) {
+    toastService.error(err.response?.data?.message || 'Błąd nadawania uprawnień');
+  }
+};
+
+const handleQuickBlock = async (userObj) => {
+  const email = userObj.email;
+  if (!email) return;
+
+  const reason = prompt(`Zablokować użytkownika ${email}? Podaj powód (opcjonalnie):`);
+  if (reason === null) return; // Cancelled prompt
+  
+  try {
+    await api.post(`/topics/${topicId.value}/blocks`, { email, reason });
+    toastService.success(`Użytkownik ${email} został zablokowany.`);
+    fetchTopicData(topicId.value); // Refresh access/counts if needed
+  } catch (err) {
+    toastService.error(err.response?.data?.message || 'Błąd blokowania użytkownika');
+  }
+};
+
+const changePage = (newPage) => {
+  if (newPage < 1 || newPage > pagination.pages) return;
+  pagination.page = newPage;
+  fetchPosts(topicId.value);
+  window.scrollTo({ top: 300, behavior: 'smooth' });
 };
 
 const createSubtopic = async () => {
@@ -310,6 +455,9 @@ const fetchTopicData = async (id) => {
     } else {
       userAccess.value = { hasAccess: true }; // Public access assumed for details, logic on posts handles others
     }
+
+    // Also fetch posts for this topic
+    fetchPosts(id);
   } catch (err) {
     console.error('Fetch topic data error:', err);
   } finally {
@@ -645,5 +793,31 @@ onMounted(() => {
 
 .block-details p {
     margin: 0.5rem 0;
+}
+
+.posts-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.pagination-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1.5rem;
+  margin-top: 2rem;
+  padding: 1rem;
+}
+
+.page-info {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
 }
 </style>

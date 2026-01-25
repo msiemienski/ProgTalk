@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import helmet from 'helmet';
 import connectDB from './config/db.js';
+import './models/index.js'; // Ensure all models are registered
 
 // Load environment variables
 dotenv.config();

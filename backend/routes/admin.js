@@ -258,4 +258,35 @@ router.post('/topics/:id/unhide', async (req, res) => {
     }
 });
 
+/**
+ * GET /api/admin/posts
+ * Fetch all posts with optional status filtering
+ */
+router.get('/posts', async (req, res) => {
+    try {
+        const { deleted } = req.query;
+        const Post = (await import('../models/Post.js')).default;
+
+        const query = {};
+        if (deleted === 'true') {
+            query.isDeleted = true;
+        } else if (deleted === 'false') {
+            query.isDeleted = false;
+        }
+
+        const posts = await Post.find(query)
+            .populate('authorId', 'email profile')
+            .populate('topicId', 'name')
+            .sort({ createdAt: -1 })
+            .limit(100);
+
+        res.json(posts);
+    } catch (error) {
+        res.status(500).json({
+            error: 'Failed to fetch posts',
+            message: error.message,
+        });
+    }
+});
+
 export default router;

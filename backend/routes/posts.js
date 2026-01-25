@@ -6,58 +6,6 @@ import { validatePagination } from '../utils/validators.js';
 const router = express.Router();
 
 /**
- * GET /api/topics/:topicId/posts
- * Get posts in a topic (paginated)
- */
-router.get('/:topicId/posts', optionalAuth, async (req, res) => {
-    try {
-        const { page, limit } = validatePagination(req.query.page, req.query.limit);
-
-        const result = await PostService.getTopicPosts(req.params.topicId, req.userId, page, limit);
-
-        res.json(result);
-    } catch (error) {
-        res.status(500).json({
-            error: 'Failed to fetch posts',
-            message: error.message,
-        });
-    }
-});
-
-/**
- * POST /api/topics/:topicId/posts
- * Create a new post
- */
-router.post('/:topicId/posts', authenticate, requireNotBlocked, async (req, res) => {
-    try {
-        const { content, codeBlocks, tags, referencedPosts } = req.body;
-
-        if (!content || content.trim().length === 0) {
-            return res.status(400).json({
-                error: 'Bad Request',
-                message: 'Post content is required',
-            });
-        }
-
-        const post = await PostService.createPost(
-            req.params.topicId,
-            req.userId,
-            content,
-            codeBlocks || [],
-            tags || [],
-            referencedPosts || []
-        );
-
-        res.status(201).json(post);
-    } catch (error) {
-        res.status(400).json({
-            error: 'Post Creation Failed',
-            message: error.message,
-        });
-    }
-});
-
-/**
  * GET /api/posts/:id
  * Get a single post
  */
