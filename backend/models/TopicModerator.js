@@ -86,27 +86,33 @@ topicModeratorSchema.statics.getUserModeratedTopics = async function (userId) {
     return await Topic.find({ _id: { $in: topicIds } });
 };
 
-// Static method to get all moderators of a topic (including inherited)
 topicModeratorSchema.statics.getTopicModerators = async function (topicId, includeInherited = true) {
-    const Topic = mongoose.model('Topic');
-    const topic = await Topic.findById(topicId);
+    try {
+        const Topic = mongoose.model('Topic');
+        const topic = await Topic.findById(topicId);
 
-    if (!topic) {
+        if (!topic) {
+            console.log(`[DEBUG] getTopicModerators: Topic ${topicId} not found`);
+            return [];
+        }
+
+        let topicsToCheck = [topic._id];
+        if (includeInherited && topic.path && topic.path.length > 0) {
+            // Add all ancestors to the list
+            topicsToCheck = [...topic.path, topic._id];
+        }
+
+        console.log(`[DEBUG] getTopicModerators: Querying TopicModerator for topicIds:`, topicsToCheck);
+
+        return await this.find({
+            topicId: { $in: topicsToCheck },
+        })
+            .populate('userId', 'email profile')
+            .lean(); // Use lean for faster, plain object access in service
+    } catch (err) {
+        console.error(`[ERROR] getTopicModerators static error:`, err);
         return [];
     }
-
-    let topicsToCheck;
-    if (includeInherited) {
-        // Include moderators from ancestors
-        topicsToCheck = [...topic.path, topic._id];
-    } else {
-        // Only direct moderators
-        topicsToCheck = [topic._id];
-    }
-
-    return await this.find({
-        topicId: { $in: topicsToCheck },
-    }).populate('userId', 'email profile');
 };
 
 const TopicModerator = mongoose.model('TopicModerator', topicModeratorSchema);

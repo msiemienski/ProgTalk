@@ -223,4 +223,116 @@ router.get('/:id/path', optionalAuth, async (req, res) => {
     }
 });
 
+
+
+/**
+ * GET /api/topics/:id/moderators
+ * Get topic moderators
+ */
+router.get('/:id/moderators', optionalAuth, async (req, res) => {
+    try {
+        const moderators = await TopicService.getModerators(req.params.id);
+        res.json(moderators);
+    } catch (error) {
+        res.status(500).json({
+            error: 'Failed to fetch moderators',
+            message: error.message,
+        });
+    }
+});
+
+/**
+ * POST /api/topics/:id/moderators
+ * Add moderator
+ */
+router.post('/:id/moderators', authenticate, async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({ error: 'Email is required' });
+        }
+
+        const result = await TopicService.addModerator(req.params.id, email, req.userId);
+        res.json(result);
+    } catch (error) {
+        res.status(400).json({
+            error: 'Failed to add moderator',
+            message: error.message,
+        });
+    }
+});
+
+/**
+ * DELETE /api/topics/:id/moderators/:userId
+ * Remove moderator
+ */
+router.delete('/:id/moderators/:userId', authenticate, async (req, res) => {
+    try {
+        const result = await TopicService.removeModerator(req.params.id, req.params.userId, req.userId);
+        res.json(result);
+    } catch (error) {
+        res.status(400).json({
+            error: 'Failed to remove moderator',
+            message: error.message,
+        });
+    }
+});
+
+/**
+ * POST /api/topics/:id/blocks
+ * Block user in topic
+ */
+router.post('/:id/blocks', authenticate, async (req, res) => {
+    try {
+        const { email, reason, exceptions } = req.body;
+        if (!email) {
+            return res.status(400).json({ error: 'User email is required' });
+        }
+
+        const block = await TopicService.blockUser(req.params.id, email, req.userId, {
+            reason,
+            exceptions
+        });
+
+        res.json(block);
+    } catch (error) {
+        res.status(400).json({
+            error: 'Failed to block user',
+            message: error.message,
+        });
+    }
+});
+
+/**
+ * DELETE /api/topics/:id/blocks/:userId
+ * Unblock user
+ */
+router.delete('/:id/blocks/:userId', authenticate, async (req, res) => {
+    try {
+        const result = await TopicService.unblockUser(req.params.id, req.params.userId, req.userId);
+        res.json(result);
+    } catch (error) {
+        res.status(400).json({
+            error: 'Failed to unblock user',
+            message: error.message,
+        });
+    }
+});
+
+/**
+ * GET /api/topics/:id/access/:userId
+ * Check user access (debug)
+ */
+router.get('/:id/access/:userId', optionalAuth, async (req, res) => {
+    try {
+        const access = await TopicService.checkUserAccess(req.params.id, req.params.userId);
+        res.json(access);
+    } catch (error) {
+        res.status(500).json({
+            error: 'Failed to check access',
+            message: error.message,
+        });
+    }
+});
+
 export default router;

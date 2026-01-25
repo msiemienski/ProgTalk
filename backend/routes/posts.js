@@ -1,6 +1,6 @@
 import express from 'express';
 import PostService from '../services/PostService.js';
-import { authenticate, requireNotBlocked } from '../middleware/auth.js';
+import { authenticate, requireNotBlocked, optionalAuth } from '../middleware/auth.js';
 import { validatePagination } from '../utils/validators.js';
 
 const router = express.Router();
@@ -9,11 +9,11 @@ const router = express.Router();
  * GET /api/topics/:topicId/posts
  * Get posts in a topic (paginated)
  */
-router.get('/:topicId/posts', async (req, res) => {
+router.get('/:topicId/posts', optionalAuth, async (req, res) => {
     try {
         const { page, limit } = validatePagination(req.query.page, req.query.limit);
 
-        const result = await PostService.getTopicPosts(req.params.topicId, page, limit);
+        const result = await PostService.getTopicPosts(req.params.topicId, req.userId, page, limit);
 
         res.json(result);
     } catch (error) {
@@ -61,7 +61,7 @@ router.post('/:topicId/posts', authenticate, requireNotBlocked, async (req, res)
  * GET /api/posts/:id
  * Get a single post
  */
-router.get('/:id', async (req, res) => {
+router.get('/:id', optionalAuth, async (req, res) => {
     try {
         const userId = req.userId || null;
         const post = await PostService.getPost(req.params.id, userId);

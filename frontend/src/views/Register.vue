@@ -54,9 +54,6 @@
           </div>
         </div>
         
-        <div v-if="error" class="error-message">
-          {{ error }}
-        </div>
         
         <button type="submit" class="btn primary full-width" :disabled="loading">
           {{ loading ? 'Tworzenie konta...' : 'Zarejestruj się' }}
@@ -83,6 +80,7 @@
 <script setup>
 import { ref, reactive } from 'vue';
 import authService from '../services/authService';
+import toastService from '../services/toastService';
 
 const email = ref('');
 const password = ref('');
@@ -93,12 +91,10 @@ const profile = reactive({
 
 const registered = ref(false);
 const loading = authService.loading;
-const error = authService.error;
 
 const handleRegister = async () => {
   if (password.value !== passwordConfirm.value) {
-    // Error handled manually for UI simplicity
-    authService.error.value = 'Hasła nie są identyczne';
+    toastService.warning('Hasła nie są identyczne');
     return;
   }
 
@@ -110,8 +106,9 @@ const handleRegister = async () => {
       profile
     );
     registered.value = true;
+    toastService.success('Konto utworzone!');
   } catch (err) {
-    // Error handled by authService.error
+    toastService.error(authService.error.value || 'Błąd rejestracji');
   }
 };
 </script>

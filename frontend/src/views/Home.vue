@@ -8,6 +8,9 @@
         <router-link to="/register" class="btn primary btn-lg">Zarejestruj się</router-link>
         <router-link to="/login" class="btn outline">Zaloguj się</router-link>
       </div>
+      <div class="hero-actions" v-else>
+        <button @click="showCreateModal = true" class="btn primary btn-lg">+ Stwórz Temat</button>
+      </div>
     </div>
 
     <!-- Topics Discovery Section -->
@@ -55,6 +58,12 @@
          <button class="btn btn-sm" @click="checkHealth">Sprawdź połączenie</button>
       </div>
     </details>
+
+    <TopicCreateModal 
+      v-if="showCreateModal" 
+      @close="showCreateModal = false"
+      @created="handleTopicCreated"
+    />
   </div>
 </template>
 
@@ -62,12 +71,14 @@
 import { ref, onMounted } from 'vue';
 import api from '../services/api';
 import authService from '../services/authService';
+import TopicCreateModal from '../components/TopicCreateModal.vue';
 
 const health = ref(null);
 const loading = ref(false);
 const error = ref(null);
 const rootTopics = ref([]);
 const isAuthenticated = authService.isAuthenticated;
+const showCreateModal = ref(false);
 
 const checkHealth = async () => {
   try {
@@ -88,6 +99,11 @@ const fetchRootTopics = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+const handleTopicCreated = (newTopic) => {
+  // Add new topic to the list
+  rootTopics.value.unshift(newTopic);
 };
 
 onMounted(() => {

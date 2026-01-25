@@ -195,9 +195,10 @@ class TopicService {
             throw new Error('Topic not found');
         }
 
-        // Check if user can moderate
+        const User = mongoose.model('User');
+        const user = await User.findById(userId);
         const canModerate = await TopicModerator.canModerate(userId, topicId);
-        if (!canModerate) {
+        if (!canModerate && user.role !== 'admin') {
             throw new Error('User is not a moderator of this topic');
         }
 
@@ -275,6 +276,268 @@ class TopicService {
             .populate('mainModeratorId', 'email profile')
             .limit(limit)
             .sort({ name: 1 });
+    }
+
+    /**
+     * Add moderator to a topic (by email)
+     */
+    async addModerator(topicId, email, assignedByUserId) {
+        const topic = await Topic.findById(topicId);
+        if (!topic) {
+            throw new Error('Topic not found');
+        }
+
+        // Check permission
+        const User = mongoose.model('User');
+        const assignedBy = await User.findById(assignedByUserId);
+        const canModerate = await TopicModerator.canModerate(assignedByUserId, topicId);
+
+        if (!canModerate && assignedBy.role !== 'admin') {
+            throw new Error('You do not have permission to add moderators to this topic');
+        }
+
+        // Find target user
+        const targetUser = await User.findOne({ email });
+        if (!targetUser) {
+            throw new Error('User with this email not found');
+        }
+
+        if (targetUser.role === 'admin') {
+            throw new Error('Admins are already moderators of everything');
+        }
+
+        // Check if already moderator
+        const existing = await TopicModerator.findOne({ topicId, userId: targetUser._id });
+        if (existing) {
+            throw new Error('User is already a direct moderator of this topic');
+        }
+
+        // Check if inherited (optional - maybe we still want to allow direct assignment?)
+        // For now, let's allow explicit assignment even if inherited, 
+        // effectively "pinning" them to this level even if removed from parent.
+        // But the constraint unique { topicId, userId } prevents duplicates at THIS level.
+
+        await TopicModerator.create({
+            topicId,
+            userId: targetUser._id,
+            assignedBy: assignedByUserId,
+        });
+
+        return { success: true, user: targetUser.toPublicJSON() };
+    }
+
+    /**
+     * Remove moderator from a topic (and cascade to subtopics)
+     */
+    async removeModerator(topicId, targetUserId, requestingUserId) {
+        const topic = await Topic.findById(topicId);
+        if (!topic) {
+            throw new Error('Topic not found');
+        }
+
+        const User = mongoose.model('User');
+        const requestor = await User.findById(requestingUserId);
+
+        // 1. Check permission
+        const canModerate = await TopicModerator.canModerate(requestingUserId, topicId);
+        if (!canModerate && requestor.role !== 'admin') {
+            throw new Error('You do not have permission to manage moderators');
+        }
+
+        // Cannot remove main moderator
+        if (topic.mainModeratorId.toString() === targetUserId) {
+            throw new Error('Cannot remove the main moderator (creator) of the topic');
+        }
+
+        // 2. Remove direct moderation on this topic
+        const deleted = await TopicModerator.findOneAndDelete({ topicId, userId: targetUserId });
+
+        let subtopicsCleaned = 0;
+
+        // 3. Cascade removal: Find all subtopics where this user might be added
+        // Note: This logic assumes we want to fully purge them from the subtree
+        // initiated from this point.
+        const descendants = await Topic.find({ path: topicId });
+        const descendantIds = descendants.map(d => d._id);
+
+        if (descendantIds.length > 0) {
+            const result = await TopicModerator.deleteMany({
+                topicId: { $in: descendantIds },
+                userId: targetUserId
+            });
+            subtopicsCleaned = result.deletedCount;
+        }
+
+        return {
+            success: true,
+            removedDirect: !!deleted,
+            subtopicsCleaned
+        };
+    }
+
+    /**
+     * Get moderators for a topic (including inherited)
+     */
+    async getModerators(topicId) {
+        try {
+            const moderators = await TopicModerator.getTopicModerators(topicId, true);
+            console.log(`[DEBUG] Found ${moderators.length} moderator records for topic ${topicId}`);
+
+            const mapped = await Promise.all(moderators.map(async mod => {
+                // Determine user ID
+                const uid = mod.userId?._id || mod.userId;
+                if (!uid) return null;
+
+                // Handle both populated and raw userId
+                const isPopulated = typeof mod.userId === 'object' && mod.userId.email;
+                const email = isPopulated ? mod.userId.email : 'Unknown Email';
+                const profileName = isPopulated ? mod.userId.profile?.name : null;
+                const displayName = profileName || email.split('@')[0];
+
+                const modTopicId = mod.topicId?._id || mod.topicId;
+                const isDirect = modTopicId ? modTopicId.toString() === topicId.toString() : false;
+
+                return {
+                    userId: uid,
+                    email,
+                    name: displayName,
+                    avatar: isPopulated ? mod.userId.profile?.avatar : null,
+                    assignedAt: mod.assignedAt,
+                    isMain: mod.isMain,
+                    type: isDirect ? 'direct' : 'inherited',
+                    sourceTopicId: modTopicId
+                };
+            }));
+
+            const finalModerators = mapped.filter(m => m !== null);
+
+            // Ensure main moderator (creator) is included
+            const hasMain = finalModerators.some(m => m.isMain);
+            if (!hasMain) {
+                const topic = await Topic.findById(topicId).populate('mainModeratorId', 'email profile');
+                if (topic && topic.mainModeratorId) {
+                    const creator = topic.mainModeratorId;
+                    const email = creator.email;
+                    const profileName = creator.profile?.name;
+                    const displayName = profileName || email.split('@')[0];
+
+                    finalModerators.unshift({
+                        userId: creator._id,
+                        email,
+                        name: displayName,
+                        avatar: creator.profile?.avatar || null,
+                        assignedAt: topic.createdAt,
+                        isMain: true,
+                        type: 'direct',
+                        sourceTopicId: topicId
+                    });
+                }
+            }
+
+            return finalModerators;
+        } catch (error) {
+            console.error('[ERROR] getModerators service error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Block user in a topic
+     */
+    async blockUser(topicId, email, blockedByUserId, data) {
+        const TopicBlock = (await import('../models/TopicBlock.js')).default;
+        const User = mongoose.model('User');
+
+        const topic = await Topic.findById(topicId);
+        if (!topic) throw new Error('Topic not found');
+
+        // Check permission: Requestor must be moderator of this topic or admin
+        const canModerate = await TopicModerator.canModerate(blockedByUserId, topicId);
+        const requestor = await User.findById(blockedByUserId);
+        if (!canModerate && requestor.role !== 'admin') {
+            throw new Error('You do not have permission to block users in this topic');
+        }
+
+        // Find target user
+        const targetUser = await User.findOne({ email });
+        if (!targetUser) throw new Error('User with this email not found');
+
+        if (targetUser.role === 'admin') {
+            throw new Error('Admins cannot be blocked');
+        }
+
+        // Check if already blocked in THIS topic
+        let block = await TopicBlock.findOne({ topicId, userId: targetUser._id });
+
+        if (block) {
+            // Update existing block
+            block.reason = data.reason || block.reason;
+            block.exceptionSubtopics = data.exceptions || block.exceptionSubtopics;
+            block.blockedBy = blockedByUserId;
+            await block.save();
+        } else {
+            // Create new block
+            block = await TopicBlock.create({
+                topicId,
+                userId: targetUser._id,
+                blockedBy: blockedByUserId,
+                reason: data.reason,
+                exceptionSubtopics: data.exceptions || []
+            });
+        }
+
+        return block;
+    }
+
+    /**
+     * Unblock user in a topic
+     */
+    async unblockUser(topicId, targetUserId, requestingUserId) {
+        const TopicBlock = (await import('../models/TopicBlock.js')).default;
+        const User = mongoose.model('User');
+
+        // Check permission
+        const canModerate = await TopicModerator.canModerate(requestingUserId, topicId);
+        const requestor = await User.findById(requestingUserId);
+
+        if (!canModerate && requestor.role !== 'admin') {
+            throw new Error('You do not have permission to unblock users in this topic');
+        }
+
+        const result = await TopicBlock.findOneAndDelete({ topicId, userId: targetUserId });
+        if (!result) throw new Error('No block found for this user in this topic');
+
+        return { success: true };
+    }
+
+    /**
+     * Debug/Check user access to a topic
+     */
+    async checkUserAccess(topicId, targetUserId) {
+        const TopicBlock = (await import('../models/TopicBlock.js')).default;
+
+        const isBlocked = await TopicBlock.isUserBlocked(targetUserId, topicId);
+
+        // Find the specific block if it exists (for reason)
+        const topic = await Topic.findById(topicId);
+        const topicsToCheck = topic ? [...topic.path, topic._id] : [topicId];
+
+        const activeBlock = await TopicBlock.findOne({
+            topicId: { $in: topicsToCheck },
+            userId: targetUserId
+        }).populate('topicId', 'name').populate('blockedBy', 'email');
+
+        return {
+            topicId,
+            userId: targetUserId,
+            hasAccess: !isBlocked,
+            block: activeBlock ? {
+                blockedIn: activeBlock.topicId.name,
+                reason: activeBlock.reason,
+                blockedBy: activeBlock.blockedBy?.email || 'System',
+                blockedAt: activeBlock.blockedAt
+            } : null
+        };
     }
 }
 

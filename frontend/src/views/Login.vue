@@ -29,9 +29,6 @@
           >
         </div>
         
-        <div v-if="error" class="error-message">
-          {{ error }}
-        </div>
         
         <button type="submit" class="btn primary full-width" :disabled="loading">
           {{ loading ? 'Logowanie...' : 'Zaloguj się' }}
@@ -49,19 +46,20 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import authService from '../services/authService';
+import toastService from '../services/toastService';
 
 const router = useRouter();
 const email = ref('');
 const password = ref('');
 const loading = authService.loading;
-const error = authService.error;
 
 const handleLogin = async () => {
   try {
     await authService.login(email.value, password.value);
+    toastService.success('Zalogowano pomyślnie!');
     router.push('/');
   } catch (err) {
-    // Error handled by authService.error
+    toastService.error(authService.error.value || 'Błąd logowania');
   }
 };
 </script>

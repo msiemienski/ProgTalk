@@ -50,11 +50,14 @@ class PostService {
             throw new Error('Post not found');
         }
 
-        // Check if user is author or moderator
+        // Check if user is author, moderator or admin
         const isAuthor = post.authorId.equals(userId);
         const canModerate = await TopicModerator.canModerate(userId, post.topicId);
 
-        if (!isAuthor && !canModerate) {
+        const User = mongoose.model('User');
+        const user = await User.findById(userId);
+
+        if (!isAuthor && !canModerate && user.role !== 'admin') {
             throw new Error('You do not have permission to edit this post');
         }
 
@@ -92,11 +95,14 @@ class PostService {
             throw new Error('Post not found');
         }
 
-        // Check if user is author or moderator
+        // Check if user is author, moderator or admin
         const isAuthor = post.authorId.equals(userId);
         const canModerate = await TopicModerator.canModerate(userId, post.topicId);
 
-        if (!isAuthor && !canModerate) {
+        const User = mongoose.model('User');
+        const user = await User.findById(userId);
+
+        if (!isAuthor && !canModerate && user.role !== 'admin') {
             throw new Error('You do not have permission to delete this post');
         }
 
@@ -113,9 +119,13 @@ class PostService {
             throw new Error('Post not found');
         }
 
-        // Only moderators can restore
+        // Only moderators or admins can restore
         const canModerate = await TopicModerator.canModerate(userId, post.topicId);
-        if (!canModerate) {
+
+        const User = mongoose.model('User');
+        const user = await User.findById(userId);
+
+        if (!canModerate && user.role !== 'admin') {
             throw new Error('Only moderators can restore deleted posts');
         }
 
@@ -126,10 +136,18 @@ class PostService {
     /**
      * Get posts in a topic (paginated)
      */
-    async getTopicPosts(topicId, page = 1, limit = 20, includeDeleted = false) {
+    async getTopicPosts(topicId, userId = null, page = 1, limit = 20, includeDeleted = false) {
         const topic = await Topic.findById(topicId);
         if (!topic) {
             throw new Error('Topic not found');
+        }
+
+        // Check if user is blocked (read access)
+        if (userId) {
+            const isBlocked = await TopicBlock.isUserBlocked(userId, topicId);
+            if (isBlocked) {
+                throw new Error('You are blocked from viewing this topic');
+            }
         }
 
         return await Post.getPaginated(topicId, page, limit, includeDeleted);
@@ -146,6 +164,14 @@ class PostService {
 
         if (!post) {
             throw new Error('Post not found');
+        }
+
+        // Check if user is blocked (read access)
+        if (userId) {
+            const isBlocked = await TopicBlock.isUserBlocked(userId, post.topicId);
+            if (isBlocked) {
+                throw new Error('You are blocked from viewing posts in this topic');
+            }
         }
 
         // Check if user has liked this post

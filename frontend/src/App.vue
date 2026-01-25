@@ -37,12 +37,15 @@
         <p>&copy; 2026 ProgTalk - Społeczność Programistów</p>
       </div>
     </footer>
+
+    <ToastContainer />
   </div>
 </template>
 
 <script setup>
 import { useRouter } from 'vue-router';
 import authService from './services/authService';
+import ToastContainer from './components/ToastContainer.vue';
 
 const router = useRouter();
 const isAuthenticated = authService.isAuthenticated;
@@ -149,6 +152,7 @@ body {
   margin: 0;
   font-size: 1.5rem;
   background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
