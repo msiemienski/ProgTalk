@@ -238,9 +238,11 @@
                 :can-moderate="isModerator"
                 :is-mod="checkAuthorModStatus(post.authorId)"
                 :is-blocked="checkAuthorBlockStatus(post.authorId)"
+                :topic-id="topicId"
                 @delete="handleDeletePost"
                 @promote="handlePromoteUser"
                 @block="handleQuickBlock"
+                @block-success="fetchBlocks(topicId)"
                 @toggle-like="handleLikePost"
               />
 
