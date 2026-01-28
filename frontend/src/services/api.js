@@ -2,6 +2,7 @@ import axios from 'axios';
 
 // Create axios instance with default config
 const api = axios.create({
+    // When running in Docker we set VITE_API_URL to '/api' so browser hits Vite and Vite proxies.
     baseURL: import.meta.env.VITE_API_URL || '/api',
     timeout: 10000,
     headers: {

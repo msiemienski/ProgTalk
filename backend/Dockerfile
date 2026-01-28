@@ -4,13 +4,15 @@ FROM node:20-alpine
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
+COPY backend/package*.json ./
 
 # Install dependencies
 RUN npm install
 
 # Copy application files
-COPY . .
+COPY backend/. .
+# Copy shared certs into the image at /app/certs so backend can load them
+COPY certs /app/certs
 
 # Expose port
 EXPOSE 3000

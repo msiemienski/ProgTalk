@@ -26,8 +26,8 @@ services:
   # Backend API
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./backend/Dockerfile
     container_name: progtalk-backend
     restart: unless-stopped
     ports:
@@ -40,10 +40,6 @@ services:
       SSL_KEY_PATH: /app/certs/server.key
       SSL_CERT_PATH: /app/certs/server.cert
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
-      - ./certs:/app/certs:ro
     networks:
       - progtalk-network
     depends_on:
@@ -58,18 +54,16 @@ services:
   # Frontend Vue App
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./frontend/Dockerfile
     container_name: progtalk-frontend
     restart: unless-stopped
     ports:
       - "5173:5173"
     environment:
-      VITE_API_URL: https://backend:3000/api
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - ./certs:/app/certs:ro
+      # Use a relative API URL so the browser talks to the Vite dev server
+      # and the Vite proxy forwards requests to the backend service inside Docker.
+      VITE_API_URL: /api
     networks:
       - progtalk-network
     depends_on:

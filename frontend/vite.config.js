@@ -11,17 +11,19 @@ export default defineConfig({
         host: '0.0.0.0',
         port: 5173,
         https: {
-            key: fs.readFileSync(path.resolve(__dirname, '../certs/server.key')),
-            cert: fs.readFileSync(path.resolve(__dirname, '../certs/server.cert')),
+            // When running inside the frontend container, certs are mounted to /app/certs
+            key: fs.readFileSync(path.resolve(__dirname, './certs/server.key')),
+            cert: fs.readFileSync(path.resolve(__dirname, './certs/server.cert')),
         },
         proxy: {
             '/api': {
-                target: 'https://localhost:3000',
+                // Proxy to the backend service on the Docker network
+                target: 'https://backend:3000',
                 changeOrigin: true,
                 secure: false,
             },
             '/socket.io': {
-                target: 'https://localhost:3000', // Use https instead of wss for proxy target usually
+                target: 'https://backend:3000', // Use backend service name inside Docker
                 changeOrigin: true,
                 secure: false,
                 ws: true,

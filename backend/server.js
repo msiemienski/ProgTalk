@@ -20,8 +20,17 @@ app.use(helmet({
     contentSecurityPolicy: false, // Disable for development
 }));
 
+// Allow both localhost with https and http during development when needed.
+const allowedOrigin = process.env.FRONTEND_URL || 'https://localhost:5173';
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'https://localhost:5173',
+    origin: (origin, callback) => {
+        // allow requests with no origin (like mobile apps or curl)
+        if (!origin) return callback(null, true);
+        // allow configured origin or localhost variations
+        const allowedOrigins = [allowedOrigin, 'http://localhost:5173', 'https://localhost:5173'];
+        if (allowedOrigins.includes(origin)) return callback(null, true);
+        return callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
 }));
 
@@ -79,8 +88,11 @@ app.use((req, res) => {
 let server;
 try {
     // Try to load SSL certificates
-    const sslKey = fs.readFileSync(process.env.SSL_KEY_PATH || '../certs/server.key');
-    const sslCert = fs.readFileSync(process.env.SSL_CERT_PATH || '../certs/server.cert');
+    // Inside Docker certs are typically mounted to /app/certs
+    const sslKeyPath = process.env.SSL_KEY_PATH || '/app/certs/server.key';
+    const sslCertPath = process.env.SSL_CERT_PATH || '/app/certs/server.cert';
+    const sslKey = fs.readFileSync(sslKeyPath);
+    const sslCert = fs.readFileSync(sslCertPath);
 
     server = https.createServer({
         key: sslKey,
