@@ -333,10 +333,6 @@ class TopicService {
             throw new Error('User is already a direct moderator of this topic');
         }
 
-        // Check if inherited (optional - maybe we still want to allow direct assignment?)
-        // For now, let's allow explicit assignment even if inherited, 
-        // effectively "pinning" them to this level even if removed from parent.
-        // But the constraint unique { topicId, userId } prevents duplicates at THIS level.
 
         await TopicModerator.create({
             topicId,
@@ -456,7 +452,6 @@ class TopicService {
             }
 
             // De-duplicate by userId
-            // Priority matches the UI needs: isMain > type: 'direct' > type: 'inherited'
             const uniqueModeratorsMap = new Map();
 
             finalModeratorsRaw.forEach(mod => {

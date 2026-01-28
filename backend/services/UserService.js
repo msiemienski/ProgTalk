@@ -20,7 +20,6 @@ class UserService {
             status: 'pending', // Requires admin approval
         });
 
-        // TODO: Notify admins about new registration
 
         return user.toPublicJSON();
     }
@@ -81,8 +80,6 @@ class UserService {
             userId,
             { email: user.email }
         );
-
-        // TODO: Notify user about approval
 
         return user.toPublicJSON();
     }
