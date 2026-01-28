@@ -25,6 +25,12 @@ const topicBlockSchema = new mongoose.Schema({
         maxlength: [500, 'Block reason cannot exceed 500 characters'],
     },
 
+    // Subtopics where the blocked user retains access (exceptions to the block)
+    exceptions: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Topic',
+    }],
+
     blockedAt: {
         type: Date,
         default: Date.now,
@@ -37,7 +43,7 @@ const topicBlockSchema = new mongoose.Schema({
 topicBlockSchema.index({ topicId: 1, userId: 1 });
 topicBlockSchema.index({ userId: 1 }); // Find all blocks for a user
 
-// Static method to check if user is blocked in a topic (with inheritance)
+// Static method to check if user is blocked in a topic (with inheritance and exceptions)
 topicBlockSchema.statics.isUserBlocked = async function (userId, topicId) {
     const Topic = mongoose.model('Topic');
     const topic = await Topic.findById(topicId);
@@ -50,12 +56,33 @@ topicBlockSchema.statics.isUserBlocked = async function (userId, topicId) {
     const topicsToCheck = [...topic.path, topic._id];
 
     // Find any block that applies to this user in the topic hierarchy
-    const blockCount = await this.countDocuments({
+    const blocks = await this.find({
         topicId: { $in: topicsToCheck },
         userId: userId,
     });
 
-    return blockCount > 0;
+    if (blocks.length === 0) {
+        return false;
+    }
+
+    // Check if current topic or any ancestor is in exceptions
+    // If the current topic is explicitly listed as an exception in any block, user has access
+    for (const block of blocks) {
+        if (block.exceptions && block.exceptions.length > 0) {
+            // Check if current topic is in exceptions
+            const hasException = block.exceptions.some(exceptionId =>
+                exceptionId.equals(topicId)
+            );
+
+            if (hasException) {
+                // This topic is an exception - user is NOT blocked here
+                return false;
+            }
+        }
+    }
+
+    // User is blocked and no exceptions apply
+    return true;
 };
 
 // Static method to get all blocks for a user

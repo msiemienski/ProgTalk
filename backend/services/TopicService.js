@@ -355,16 +355,38 @@ class TopicService {
         const User = mongoose.model('User');
         const requestor = await User.findById(requestingUserId);
 
-        // 1. Check permission
-        // Requirement: Only Main Moderator (creator) can remove moderators
-        // Or Admin
-        if (topic.mainModeratorId.toString() !== requestingUserId && requestor.role !== 'admin') {
-            throw new Error('Only the Main Moderator (creator) can remove moderators from this topic');
-        }
-
-        // Cannot remove main moderator (redundant check but good safety)
+        // Cannot remove main moderator (creator)
         if (topic.mainModeratorId.toString() === targetUserId) {
             throw new Error('Cannot remove the main moderator (creator) of the topic');
+        }
+
+        // Check permission using hierarchy
+        // Admins can always remove
+        if (requestor.role === 'admin') {
+            // Admin can proceed
+        }
+        // Main moderator of THIS topic can remove anyone
+        else if (topic.mainModeratorId.toString() === requestingUserId) {
+            // Main mod can proceed
+        }
+        // Otherwise, check hierarchy levels
+        else {
+            const requestorLevel = await TopicModerator.getModeratorLevel(requestingUserId, topicId);
+            const targetLevel = await TopicModerator.getModeratorLevel(targetUserId, topicId);
+
+            if (requestorLevel === null) {
+                throw new Error('You are not a moderator of this topic');
+            }
+
+            if (targetLevel === null) {
+                throw new Error('Target user is not a moderator of this topic');
+            }
+
+            // Lower level number = higher in hierarchy
+            // Can only remove if requestor is higher (lower number) than target
+            if (requestorLevel >= targetLevel) {
+                throw new Error('You can only remove moderators who are lower in the hierarchy than you');
+            }
         }
 
         // 2. Remove direct moderation on this topic
@@ -373,8 +395,6 @@ class TopicService {
         let subtopicsCleaned = 0;
 
         // 3. Cascade removal: Find all subtopics where this user might be added
-        // Note: This logic assumes we want to fully purge them from the subtree
-        // initiated from this point.
         const descendants = await Topic.find({ path: topicId });
         const descendantIds = descendants.map(d => d._id);
 
@@ -515,6 +535,18 @@ class TopicService {
             throw new Error('Admins cannot be blocked');
         }
 
+        // Validate exceptions: must be descendants of this topic
+        let validatedExceptions = [];
+        if (data.exceptions && Array.isArray(data.exceptions) && data.exceptions.length > 0) {
+            const descendants = await Topic.find({ path: topicId });
+            const descendantIds = descendants.map(d => d._id.toString());
+
+            validatedExceptions = data.exceptions.filter(exId => {
+                const exIdStr = exId.toString();
+                return descendantIds.includes(exIdStr);
+            });
+        }
+
         // Check if already blocked in THIS topic
         let block = await TopicBlock.findOne({ topicId, userId: targetUser._id });
 
@@ -522,6 +554,7 @@ class TopicService {
             // Update existing block
             block.reason = data.reason || block.reason;
             block.blockedBy = blockedByUserId;
+            block.exceptions = validatedExceptions;
             await block.save();
         } else {
             // Create new block
@@ -529,7 +562,8 @@ class TopicService {
                 topicId,
                 userId: targetUser._id,
                 blockedBy: blockedByUserId,
-                reason: data.reason
+                reason: data.reason,
+                exceptions: validatedExceptions
             });
         }
 
@@ -554,6 +588,7 @@ class TopicService {
         return await TopicBlock.find({ topicId })
             .populate('userId', 'email profile')
             .populate('blockedBy', 'email profile')
+            .populate('exceptions', 'name')
             .sort({ blockedAt: -1 });
     }
 

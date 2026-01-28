@@ -114,6 +114,35 @@ topicModeratorSchema.statics.getTopicModerators = async function (topicId, inclu
     }
 };
 
+// Get moderator's level in hierarchy (lower number = higher in hierarchy)
+// Returns the depth of the topic where user is a DIRECT moderator
+// Returns null if user is not a moderator
+topicModeratorSchema.statics.getModeratorLevel = async function (userId, topicId) {
+    const Topic = mongoose.model('Topic');
+    const topic = await Topic.findById(topicId);
+
+    if (!topic) {
+        return null;
+    }
+
+    // Check all topics in the path (ancestors) + current topic
+    const topicsToCheck = [...topic.path, topic._id];
+
+    // Find where user is a direct moderator
+    const moderation = await this.findOne({
+        userId: userId,
+        topicId: { $in: topicsToCheck }
+    }).populate('topicId');
+
+    if (!moderation) {
+        return null;
+    }
+
+    // Return the level (path length) of the topic where they're a moderator
+    // Root topics have path.length = 0, their children have path.length = 1, etc.
+    return moderation.topicId.path.length;
+};
+
 const TopicModerator = mongoose.model('TopicModerator', topicModeratorSchema);
 
 export default TopicModerator;

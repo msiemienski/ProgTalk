@@ -28,6 +28,17 @@ class SocketService {
         if (!this.io) return;
         this.io.emit('user:blocked', { userId, topicId });
     }
+
+    emitUserRegistration(userData) {
+        if (!this.io) return;
+        // Emit to all connected admins
+        this.io.emit('user:registered', {
+            userId: userData._id,
+            email: userData.email,
+            registeredAt: userData.registeredAt
+        });
+        console.log(`📡 Emitted user registration: ${userData.email}`);
+    }
 }
 
 export default new SocketService();

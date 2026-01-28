@@ -20,6 +20,13 @@ class UserService {
             status: 'pending', // Requires admin approval
         });
 
+        // Emit socket event to notify admins of new registration
+        try {
+            const SocketService = (await import('./SocketService.js')).default;
+            SocketService.emitUserRegistration(user);
+        } catch (err) {
+            console.error('Socket emit failed:', err);
+        }
 
         return user.toPublicJSON();
     }

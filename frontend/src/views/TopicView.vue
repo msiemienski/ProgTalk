@@ -68,9 +68,14 @@
           <h3>Blokady</h3>
           <div class="mod-list">
             <div v-for="block in blockedUsers" :key="block._id" class="mod-item">
-              <span class="mod-name" :title="block.userId?.email">
-                {{ block.userId?.profile?.name || block.userId?.email?.split('@')[0] }}
-              </span>
+              <div class="block-info">
+                <span class="mod-name" :title="block.userId?.email">
+                  {{ block.userId?.profile?.name || block.userId?.email?.split('@')[0] }}
+                </span>
+                <span v-if="block.exceptions && block.exceptions.length > 0" class="badge mini gray" :title="'Wyjątki: ' + block.exceptions.map(e => e.name).join(', ')">
+                  {{ block.exceptions.length }} wyjątków
+                </span>
+              </div>
               <button 
                 class="btn-icon danger" 
                 @click="handleQuickBlock(block.userId)"
@@ -83,18 +88,37 @@
           </div>
 
           <div v-if="!showBlockForm">
-            <button class="btn secondary btn-sm full-width" @click="showBlockForm = true">
+            <button class="btn secondary btn-sm full-width" @click="openBlockForm">
               + Zablokuj Użytkownika
             </button>
           </div>
-          <form v-else @submit.prevent="blockUser" class="mini-form">
-            <input type="email" v-model="blockForm.email" placeholder="Email" required class="mini-input">
-            <textarea v-model="blockForm.reason" placeholder="Powód (opcjonalnie)" class="mini-input" rows="2"></textarea>
-            <div class="mini-actions">
-              <button type="submit" class="btn primary btn-sm" :disabled="blocking">OK</button>
-              <button type="button" class="btn text btn-sm" @click="showBlockForm = false">Anuluj</button>
-            </div>
-          </form>
+          <div v-else class="block-form-expanded">
+            <form @submit.prevent="blockUser" class="mini-form">
+              <input type="email" v-model="blockForm.email" placeholder="Email" required class="mini-input">
+              <textarea v-model="blockForm.reason" placeholder="Powód (opcjonalnie)" class="mini-input" rows="2"></textarea>
+              
+              <!-- Subtopic Exceptions -->
+              <div v-if="availableSubtopics.length > 0" class="exceptions-section">
+                <label class="section-label">Wyjątki (podtematy z dostępem):</label>
+                <div class="subtopic-checkboxes">
+                  <label v-for="sub in availableSubtopics" :key="sub._id" class="checkbox-item">
+                    <input 
+                      type="checkbox" 
+                      :value="sub._id" 
+                      v-model="blockForm.selectedExceptions"
+                    >
+                    <span>{{ sub.name }}</span>
+                  </label>
+                </div>
+                <p class="help-text">Zaznaczone podtematy będą dostępne dla zablokowanego użytkownika</p>
+              </div>
+              
+              <div class="mini-actions">
+                <button type="submit" class="btn primary btn-sm" :disabled="blocking">Zablokuj</button>
+                <button type="button" class="btn text btn-sm" @click="closeBlockForm">Anuluj</button>
+              </div>
+            </form>
+          </div>
         </div>
       </aside>
 
@@ -303,10 +327,11 @@ const addingMod = ref(false);
 // Blocking state
 const showBlockForm = ref(false);
 const blocking = ref(false);
+const availableSubtopics = ref([]);
 const blockForm = reactive({
   email: '',
   reason: '',
-  exceptions: []
+  selectedExceptions: []
 });
 const userAccess = ref(null);
 const blockedUsers = ref([]);
@@ -330,15 +355,38 @@ const canManageModerators = computed(() => {
   return topic.value.mainModeratorId?._id === user.value.id || topic.value.mainModeratorId === user.value.id;
 });
 
+const openBlockForm = async () => {
+  showBlockForm.value = true;
+  // Fetch all descendants for exceptions selection
+  try {
+    const res = await api.get(`/topics/${topicId.value}/subtopics?includeDescendants=true`);
+    availableSubtopics.value = res.data;
+  } catch (err) {
+    console.error('Failed to fetch subtopics:', err);
+    availableSubtopics.value = [];
+  }
+};
+
+const closeBlockForm = () => {
+  showBlockForm.value = false;
+  blockForm.email = '';
+  blockForm.reason = '';
+  blockForm.selectedExceptions = [];
+  availableSubtopics.value = [];
+};
+
 const blockUser = async () => {
   if (!blockForm.email) return;
   blocking.value = true;
   try {
-    await api.post(`/topics/${topicId.value}/blocks`, blockForm);
+    const payload = {
+      email: blockForm.email,
+      reason: blockForm.reason,
+      exceptions: blockForm.selectedExceptions
+    };
+    await api.post(`/topics/${topicId.value}/blocks`, payload);
     toastService.success('Użytkownik został zablokowany.');
-    showBlockForm.value = false;
-    blockForm.email = '';
-    blockForm.reason = '';
+    closeBlockForm();
     fetchBlocks(topicId.value);
   } catch (err) {
     toastService.error(err.response?.data?.message || 'Błąd blokowania użytkownika');
@@ -943,6 +991,67 @@ watch(
 
 .block-details p {
     margin: 0.5rem 0;
+}
+
+/* Block Form Exceptions */
+.block-form-expanded {
+  margin-top: 0.5rem;
+}
+
+.exceptions-section {
+  margin: 1rem 0;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+}
+
+.section-label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-color);
+}
+
+.subtopic-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 0.5rem 0;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.checkbox-item input[type="checkbox"] {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+}
+
+.checkbox-item:hover {
+  color: var(--primary-color);
+}
+
+.help-text {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0.5rem 0 0 0;
+  font-style: italic;
+}
+
+.block-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .posts-list {

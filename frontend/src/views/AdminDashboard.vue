@@ -76,8 +76,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, onUnmounted } from 'vue';
 import api from '../services/api';
+import socket from '../services/socket';
+import toastService from '../services/toastService';
 
 const pendingUsers = ref([]);
 const loadingUsers = ref(false);
@@ -173,6 +175,27 @@ const formatDate = (dateStr) => {
 onMounted(() => {
   fetchPendingUsers();
   fetchTags();
+  
+  // Listen for real-time user registrations
+  socket.on('user:registered', (data) => {
+    console.log('New user registered:', data);
+    toastService.info(`Nowa rejestracja: ${data.email}`, {
+      duration: 8000,
+      onClick: () => {
+        // Scroll to pending users section
+        const section = document.querySelector('.admin-section');
+        if (section) {
+          section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
+    });
+    // Auto-refresh pending users list
+    fetchPendingUsers();
+  });
+});
+
+onUnmounted(() => {
+  socket.off('user:registered');
 });
 </script>
 
