@@ -10,18 +10,46 @@ class SocketClient {
             error: null
         });
 
-        this.url = import.meta.env.VITE_API_URL || 'https://localhost:3000';
-        console.log('[SocketClient] Connecting to:', this.url);
+        // Base API URL (used for REST requests) - may be a relative path like '/api' in Docker/Vite setup
+        this.apiUrl = import.meta.env.VITE_API_URL || 'https://localhost:3000';
+
+        // Optional explicit override for socket endpoint (can be absolute origin or relative)
+        this.socketOverride = import.meta.env.VITE_SOCKET_URL || null;
+
+        // Determine socket base URL:
+        // - If API URL is relative (starts with '/'), we assume the dev server proxy is used and
+        //   will forward '/socket.io' -> backend (so connect to current origin).
+        // - If API URL is absolute (https://host:port), connect to that origin.
+        if (this.socketOverride) {
+            this.socketBaseUrl = this.socketOverride.startsWith('/') ? undefined : this.socketOverride;
+        } else if (this.apiUrl.startsWith('/')) {
+            this.socketBaseUrl = undefined; // connect to same origin; Vite proxy will forward '/socket.io'
+        } else {
+            try {
+                const parsed = new URL(this.apiUrl);
+                this.socketBaseUrl = parsed.origin;
+            } catch (e) {
+                this.socketBaseUrl = this.apiUrl;
+            }
+        }
+
+        this.socketPath = '/socket.io';
+        console.log('[SocketClient] apiUrl:', this.apiUrl, 'socketBaseUrl:', this.socketBaseUrl, 'socketPath:', this.socketPath);
     }
 
     connect() {
         if (this.socket) return;
 
-        this.socket = io(this.url, {
+        const opts = {
             withCredentials: true,
             transports: ['websocket', 'polling'],
-            secure: true
-        });
+            path: this.socketPath,
+            // Determine secure flag: if connecting to an https origin or current page is https
+            secure: (this.socketBaseUrl ? String(this.socketBaseUrl).startsWith('https') : location.protocol === 'https:'),
+        };
+
+        // If socketBaseUrl is undefined we connect to the current origin (Vite proxy scenario)
+        this.socket = this.socketBaseUrl ? io(this.socketBaseUrl, opts) : io(undefined, opts);
 
         this.socket.on('connect', () => {
             console.log('🔌 Socket connected:', this.socket.id);

@@ -21,6 +21,8 @@ export default defineConfig({
                 target: 'https://backend:3000',
                 changeOrigin: true,
                 secure: false,
+                // Allow websocket upgrade on the /api path so `/api/socket.io` will work
+                ws: true,
             },
             '/socket.io': {
                 target: 'https://backend:3000', // Use backend service name inside Docker
