@@ -164,6 +164,32 @@ textarea::placeholder {
 }
 
 /* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.badge.mini {
+  font-size: 0.7rem;
+  padding: 0.125rem 0.4rem;
+}
+
+.badge.primary {
+  background: var(--primary-light);
+  color: var(--primary-color);
+}
+
+.badge.success {
+  background: #d1fae5;
+  color: #065f46;
+}
+
 .status-badge {
   display: inline-flex;
   padding: 0.25rem 0.75rem;

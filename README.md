@@ -94,8 +94,19 @@ Aplikacja będzie dostępna pod adresami:
 - **Health Check**: https://localhost:3000/api/health
 
 > ⚠️ **Uwaga**: Przeglądarka wyświetli ostrzeżenie o certyfikacie - to normalne dla certyfikatów self-signed. Zaakceptuj ostrzeżenie aby kontynuować.
+> ⚠️ **Uwaga**: Zaakceptuj ostrzeżenie o certyfikacie (kliknij "Zaawansowane" i "Pozwól"). W Chrome możesz też wpisać `thisisunsafe` bezpośrednio na stronie błędu.
 
-### 5. Zatrzymanie aplikacji
+### 5. Przygotowanie danych (Seeding)
+
+Aby załadować przykładowe dane do nowej bazy:
+```bash
+docker compose exec backend npm run db:seed
+```
+Dostępne konta:
+- **Admin**: `admin@progtalk.com` / `admin123`
+- **User**: `john@example.com` / `user123`
+
+### 6. Zatrzymanie aplikacji
 
 ```bash
 docker compose down
@@ -105,6 +116,31 @@ Aby usunąć również wolumeny (dane MongoDB):
 ```bash
 docker compose down -v
 ```
+
+## 🛠️ Przenośne Uruchamianie (Portable Run)
+
+### Opcja A: Docker (Zalecana)
+Najprostszy sposób. Wymaga **Docker Desktop**. Gwarantuje, że wszystko (Node, MongoDB) zadziała automatycznie.
+1. Skopiuj plik `.env.example` do `.env`.
+2. Uruchom skrypt w `certs/` aby wygenerować certyfikaty.
+3. Uruchom `docker compose up --build`.
+
+### Opcja B: Ręczne (Jeśli Docker nie działa)
+Jeśli komputer nie wspiera wirtualizacji, możesz uruchomić projekt lokalnie. Wymaga **Node.js**:
+1. **Baza danych**: Upewnij się, że w `.env` masz podany `MONGODB_URI` do bazy w chmurze (np. MongoDB Atlas) lub lokalnego MongoDB.
+2. **Certyfikaty**: Uruchom skrypt w folderze `certs/`.
+3. **Backend**:
+   ```bash
+   cd backend
+   npm install
+   npm run dev
+   ```
+4. **Frontend** (w nowym terminallu):
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
 
 ## 📁 Struktura Projektu
 

@@ -110,13 +110,7 @@ const handleTopicClick = (id) => {
   flex-grow: 1;
 }
 
-.badge.mini {
-  font-size: 0.7rem;
-  padding: 0.1rem 0.4rem;
-  background: #f1f5f9;
-  color: #64748b;
-  border-radius: 99px;
-}
+
 
 /* Transitions */
 .slide-enter-active, .slide-leave-active {

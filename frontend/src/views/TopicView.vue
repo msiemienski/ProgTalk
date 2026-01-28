@@ -28,7 +28,7 @@
             <div v-for="mod in moderators" :key="mod.userId" class="mod-item">
               <span class="mod-name" :title="mod.email">
                 {{ mod.name || mod.email.split('@')[0] }}
-                <span v-if="mod.isMain" class="badge mini">Main</span>
+                <span v-if="mod.isMain" class="badge mini primary">Main</span>
                 <span v-else-if="mod.type === 'inherited'" class="badge mini gray" title="Dziedziczony">Desk</span>
               </span>
               <button 
@@ -605,19 +605,15 @@ onMounted(() => {
   fetchTree();
   fetchTopicData(topicId.value);
 
-  // Socket connection
-  console.log('[TopicView] Connecting socket...');
-  // We use joinTopic which handles connection and buffering
+  // Real-time updates
   socket.joinTopic(topicId.value, (response) => {
       console.log('[TopicView] Join acknowledgement:', response);
   });
 
   socket.on('post:created', (newPost) => {
-    console.log('[TopicView] Received post:created event', newPost);
-    // Only add if not already present (avoid duplicate if we just created it)
+    // Prevent duplicates
     const existing = posts.value.some(p => String(p._id) === String(newPost._id));
     if (!existing) {
-      console.log('[TopicView] Adding new post to list');
       posts.value.unshift(newPost);
       
       // Only show toast if the current user IS NOT the author of the new post
@@ -625,15 +621,12 @@ onMounted(() => {
       if (!isAuthor) {
         toastService.info('Nowy post w temacie!');
       }
-    } else {
-      console.log('[TopicView] Post already exists in list');
     }
   });
 
   socket.on('topic:updated', (data) => {
-     console.log('[TopicView] Received topic:updated', data);
      if (data.action === 'subtopic_created') {
-         fetchTopicData(topicId.value); // simple refresh
+         fetchTopicData(topicId.value);
          toastService.info('Dodano nowy podtemat');
      }
   });
@@ -858,6 +851,11 @@ watch(
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.badge.primary {
+  background: var(--primary-color);
+  color: white;
 }
 
 .badge.gray {

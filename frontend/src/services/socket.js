@@ -4,13 +4,12 @@ import { reactive } from 'vue';
 class SocketClient {
     constructor() {
         this.socket = null;
-        this.currentTopicId = null; // Track current topic
+        this.currentTopicId = null;
         this.state = reactive({
             connected: false,
             error: null
         });
 
-        // Use environment variable or default to localhost (HTTPS since backend is HTTPS)
         this.url = import.meta.env.VITE_API_URL || 'https://localhost:3000';
         console.log('[SocketClient] Connecting to:', this.url);
     }
@@ -20,8 +19,8 @@ class SocketClient {
 
         this.socket = io(this.url, {
             withCredentials: true,
-            transports: ['websocket', 'polling'], // Try websocket first
-            secure: true, // Ensure secure connection
+            transports: ['websocket', 'polling'],
+            secure: true
         });
 
         this.socket.on('connect', () => {
@@ -29,9 +28,7 @@ class SocketClient {
             this.state.connected = true;
             this.state.error = null;
 
-            // Re-join topic if we were tracking one (handles reconnects)
             if (this.currentTopicId) {
-                console.log('Re-joining topic after connect:', this.currentTopicId);
                 this.joinTopic(this.currentTopicId);
             }
         });
@@ -63,7 +60,6 @@ class SocketClient {
         this.currentTopicId = topicId;
         if (!this.socket) this.connect();
 
-        // Always emit, socket.io will buffer it if disconnected
         console.log('[SocketClient] Emitting join_topic:', topicId);
         if (callback) {
             this.socket.emit('join_topic', topicId, callback);

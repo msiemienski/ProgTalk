@@ -37,7 +37,6 @@ export const authenticate = async (req, res, next) => {
         }
 
         // Allow PENDING_APPROVAL users to authenticate
-        // Access control will be handled by requireActive middleware
         if (user.status === 'blocked') {
             return res.status(403).json({
                 error: 'Forbidden',

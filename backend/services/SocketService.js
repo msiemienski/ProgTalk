@@ -17,9 +17,9 @@ class SocketService {
 
     emitTopicUpdate(topicId, action, data = null) {
         if (!this.io) return;
-        // Notify the specific topic room
+        // Notify specific topic
         this.io.to(`topic_${topicId}`).emit('topic:updated', { action, data });
-        // Also notify a global room for tree updates if needed
+        // Global tree update
         this.io.emit('tree:updated', { topicId, action });
         console.log(`📡 Emitted topic update: ${topicId} (${action})`);
     }
