@@ -79,53 +79,73 @@ const handleSubmit = async () => {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(15, 23, 42, 0.4);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  backdrop-filter: blur(2px);
+  backdrop-filter: blur(8px);
 }
 
 .modal-content {
   background: white;
-  padding: 2rem;
-  border-radius: 12px;
-  width: 90%;
-  max-width: 500px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  padding: 2.5rem;
+  border-radius: var(--radius-lg);
+  width: 95%;
+  max-width: 520px;
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--border-color);
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
 }
 
 .modal-header h3 {
   margin: 0;
-  color: var(--text-color);
+  font-size: 1.5rem;
+  font-family: 'Outfit', sans-serif;
 }
 
 .close-btn {
-  background: none;
+  background: var(--bg-color);
   border: none;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   cursor: pointer;
-  color: var(--text-muted);
+  color: var(--text-secondary);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.close-btn:hover {
+  background: var(--primary-light);
+  color: var(--primary-color);
 }
 
 .modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
-  margin-top: 2rem;
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.modal-actions .btn {
+  padding: 0.75rem 1.75rem;
 }
 
 /* Transitions */
 .modal-enter-active, .modal-leave-active {
-  transition: opacity 0.3s ease;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .modal-enter-from, .modal-leave-to {
@@ -134,11 +154,12 @@ const handleSubmit = async () => {
 
 .modal-enter-active .modal-content,
 .modal-leave-active .modal-content {
-  transition: transform 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .modal-enter-from .modal-content,
 .modal-leave-to .modal-content {
-  transform: scale(0.95);
+  transform: scale(0.9) translateY(20px);
+  opacity: 0;
 }
 </style>

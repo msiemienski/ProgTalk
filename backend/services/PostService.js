@@ -12,27 +12,21 @@ class PostService {
      * Create a new post
      */
     async createPost(topicId, authorId, content, codeBlocks = [], tags = [], referencedPosts = []) {
-        console.log(`[DEBUG] createPost for topic: ${topicId}, author: ${authorId}`);
         const topic = await Topic.findById(topicId);
         if (!topic) {
-            console.log(`[DEBUG] createPost failed: Topic not found`);
             throw new Error('Topic not found');
         }
 
         // Check if topic is active
         if (topic.status !== 'active') {
-            console.log(`[DEBUG] createPost failed: Topic status is ${topic.status}`);
             throw new Error('Cannot post in a closed or hidden topic');
         }
 
         // Check if user is blocked
         const isBlocked = await TopicBlock.isUserBlocked(authorId, topicId);
         if (isBlocked) {
-            console.log(`[DEBUG] createPost failed: User is blocked`);
             throw new Error('You are blocked from posting in this topic');
         }
-
-        console.log(`[DEBUG] createPost checks passed. Creating document...`);
 
         // Sanitize content (XSS protection)
         const sanitizedContent = sanitizeHtml(content, {
@@ -70,10 +64,20 @@ class PostService {
             referencedPosts,
         });
 
-        return await post.populate([
+        const populatedPost = await post.populate([
             { path: 'authorId', select: 'email profile' },
             { path: 'tags', select: 'name slug color' },
         ]);
+
+        // Emit socket event
+        try {
+            const SocketService = (await import('./SocketService.js')).default;
+            SocketService.emitNewPost(topicId, populatedPost);
+        } catch (err) {
+            console.error('Socket emit failed:', err);
+        }
+
+        return populatedPost;
     }
 
     /**

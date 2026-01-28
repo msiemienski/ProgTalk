@@ -69,24 +69,42 @@ const handleLogin = async () => {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 80vh;
+  min-height: calc(100vh - 80px); /* Adjust for nav height */
+  padding: 2rem;
+  background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.05), transparent),
+              radial-gradient(circle at bottom left, rgba(99, 102, 241, 0.05), transparent);
 }
 
 .login-card {
   width: 100%;
-  max-width: 400px;
-  padding: 2.5rem;
+  max-width: 420px;
+  padding: 3rem 2.5rem;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
 }
 
 h2 {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
   text-align: center;
+  font-size: 2rem;
+  background: linear-gradient(135deg, var(--text-primary) 0%, var(--primary-color) 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .subtitle {
   text-align: center;
-  color: var(--text-muted);
-  margin-bottom: 2rem;
+  color: var(--text-secondary);
+  margin-bottom: 2.5rem;
+  font-size: 0.95rem;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
 }
 
 .form-group {
@@ -95,7 +113,9 @@ h2 {
 
 .full-width {
   width: 100%;
-  margin-top: 1rem;
+  padding: 0.8rem;
+  font-size: 1rem;
+  margin-top: 1.5rem;
 }
 
 .error-message {
@@ -112,6 +132,18 @@ h2 {
   margin-top: 2rem;
   text-align: center;
   font-size: 0.9rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.card-footer a {
+  color: var(--primary-color);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.card-footer a:hover {
+  text-decoration: underline;
 }
 </style>

@@ -118,34 +118,46 @@ const handleRegister = async () => {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 85vh;
-  padding: 1rem;
+  min-height: calc(100vh - 80px);
+  padding: 2rem;
+  background: radial-gradient(circle at top left, rgba(99, 102, 241, 0.05), transparent),
+              radial-gradient(circle at bottom right, rgba(99, 102, 241, 0.05), transparent);
 }
 
 .register-card {
   width: 100%;
-  max-width: 500px;
-  padding: 2.5rem;
+  max-width: 540px;
+  padding: 3rem 2.5rem;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
 }
 
 h2 {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
   text-align: center;
+  font-size: 2rem;
+  background: linear-gradient(135deg, var(--text-primary) 0%, var(--primary-color) 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .subtitle {
   text-align: center;
-  color: var(--text-muted);
-  margin-bottom: 2rem;
+  color: var(--text-secondary);
+  margin-bottom: 2.5rem;
+  font-size: 0.95rem;
 }
 
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   .form-row {
     grid-template-columns: 1fr;
     gap: 0;
@@ -158,24 +170,24 @@ h2 {
 
 .full-width {
   width: 100%;
-  margin-top: 1rem;
-}
-
-.error-message {
-  background-color: #fee2e2;
-  color: #b91c1c;
-  padding: 0.75rem;
-  border-radius: 6px;
-  margin-bottom: 1.5rem;
-  text-align: center;
-  font-size: 0.9rem;
+  padding: 0.8rem;
+  font-size: 1rem;
+  margin-top: 1.5rem;
 }
 
 .card-footer {
   margin-top: 2rem;
   text-align: center;
   font-size: 0.9rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.card-footer a {
+  color: var(--primary-color);
+  font-weight: 600;
+  text-decoration: none;
 }
 
 /* Success Card */
@@ -184,17 +196,18 @@ h2 {
 }
 
 .success-icon {
-  font-size: 3rem;
+  font-size: 4rem;
   margin-bottom: 1.5rem;
+  filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.2));
 }
 
 .success-card p {
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
   line-height: 1.6;
 }
 
 .text-muted {
   font-size: 0.9rem;
-  margin-bottom: 2rem !important;
+  color: var(--text-secondary);
 }
 </style>

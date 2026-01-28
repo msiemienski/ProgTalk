@@ -102,18 +102,32 @@ const io = new Server(server, {
     },
 });
 
+// Initialize SocketService
+import SocketService from './services/SocketService.js';
+SocketService.init(io);
+
 // Socket.io connection handling
 io.on('connection', (socket) => {
     console.log('🔌 Client connected:', socket.id);
 
-    socket.on('disconnect', () => {
-        console.log('🔌 Client disconnected:', socket.id);
+    socket.on('join_topic', (topicId, callback) => {
+        const roomName = `topic_${topicId}`;
+        socket.join(roomName);
+        const rooms = Array.from(socket.rooms);
+        console.log(`👤 Client ${socket.id} joined ${roomName}. Rooms:`, rooms);
+        if (typeof callback === 'function') {
+            callback({ status: 'ok', room: roomName });
+        }
     });
 
-    // Example event handler
-    socket.on('message', (data) => {
-        console.log('📨 Message received:', data);
-        socket.emit('message', { echo: data });
+    socket.on('leave_topic', (topicId) => {
+        const roomName = `topic_${topicId}`;
+        socket.leave(roomName);
+        console.log(`👋 Client ${socket.id} left ${roomName}`);
+    });
+
+    socket.on('disconnect', () => {
+        console.log('🔌 Client disconnected:', socket.id);
     });
 });
 

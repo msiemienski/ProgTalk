@@ -92,7 +92,6 @@ topicModeratorSchema.statics.getTopicModerators = async function (topicId, inclu
         const topic = await Topic.findById(topicId);
 
         if (!topic) {
-            console.log(`[DEBUG] getTopicModerators: Topic ${topicId} not found`);
             return [];
         }
 
@@ -102,7 +101,7 @@ topicModeratorSchema.statics.getTopicModerators = async function (topicId, inclu
             topicsToCheck = [...topic.path, topic._id];
         }
 
-        console.log(`[DEBUG] getTopicModerators: Querying TopicModerator for topicIds:`, topicsToCheck);
+
 
         return await this.find({
             topicId: { $in: topicsToCheck },

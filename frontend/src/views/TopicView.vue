@@ -144,6 +144,10 @@
               <span>{{ topic.subtopicCount }} podtematów</span>
               <span class="dot">•</span>
               <span v-if="topic.mainModeratorId">Moderator: {{ topic.mainModeratorId.profile?.name || topic.mainModeratorId.email }}</span>
+              <span class="dot">•</span>
+              <span :style="{ color: socketStatus.connected ? '#10b981' : '#ef4444' }">
+                {{ socketStatus.connected ? '● Live' : '○ Offline' }}
+              </span>
             </div>
           </div>
 
@@ -249,11 +253,13 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, onMounted } from 'vue';
+import socket from '../services/socket';
+import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '../services/api';
 import authService from '../services/authService';
 import toastService from '../services/toastService';
+import Prism from 'prismjs';
 import TopicTree from '../components/TopicTree.vue';
 import PostCard from '../components/PostCard.vue';
 import PostCreateForm from '../components/PostCreateForm.vue';
@@ -261,6 +267,7 @@ import PostCreateForm from '../components/PostCreateForm.vue';
 const route = useRoute();
 const router = useRouter();
 const topicId = ref(route.params.id);
+const socketStatus = socket.state;
 
 const tree = ref([]);
 const topic = ref(null);
@@ -594,15 +601,65 @@ const checkAuthorBlockStatus = (authorId) => {
   return blockedUsers.value.some(b => String(b.userId?._id || b.userId) === aid);
 };
 
-watch(() => route.params.id, (newId) => {
-  topicId.value = newId;
-  fetchTopicData(newId);
-});
-
 onMounted(() => {
   fetchTree();
   fetchTopicData(topicId.value);
+
+  // Socket connection
+  console.log('[TopicView] Connecting socket...');
+  // We use joinTopic which handles connection and buffering
+  socket.joinTopic(topicId.value, (response) => {
+      console.log('[TopicView] Join acknowledgement:', response);
+  });
+
+  socket.on('post:created', (newPost) => {
+    console.log('[TopicView] Received post:created event', newPost);
+    // Only add if not already present (avoid duplicate if we just created it)
+    const existing = posts.value.some(p => String(p._id) === String(newPost._id));
+    if (!existing) {
+      console.log('[TopicView] Adding new post to list');
+      posts.value.unshift(newPost);
+      
+      // Only show toast if the current user IS NOT the author of the new post
+      const isAuthor = user.value && (String(newPost.authorId?._id || newPost.authorId) === String(user.value.id));
+      if (!isAuthor) {
+        toastService.info('Nowy post w temacie!');
+      }
+    } else {
+      console.log('[TopicView] Post already exists in list');
+    }
+  });
+
+  socket.on('topic:updated', (data) => {
+     console.log('[TopicView] Received topic:updated', data);
+     if (data.action === 'subtopic_created') {
+         fetchTopicData(topicId.value); // simple refresh
+         toastService.info('Dodano nowy podtemat');
+     }
+  });
 });
+
+onUnmounted(() => {
+  if (topicId.value) {
+    socket.leaveTopic(topicId.value);
+  }
+  socket.off('post:created');
+  socket.off('topic:updated');
+});
+
+// Watch route change to handle navigation to other topics
+watch(
+  () => route.params.id,
+  (newId) => {
+    if (topicId.value) {
+        socket.leaveTopic(topicId.value);
+    }
+    topicId.value = newId;
+    posts.value = []; // Clear posts immediately
+    fetchTopicData(newId);
+    socket.joinTopic(newId);
+  }
+);
 </script>
 
 <style scoped>

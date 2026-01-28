@@ -27,7 +27,7 @@
     </header>
     
     <main class="app-main">
-      <div class="container">
+      <div :class="{ 'container': !isCenteredPage }">
         <router-view />
       </div>
     </main>
@@ -43,14 +43,20 @@
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
+import { computed } from 'vue';
 import authService from './services/authService';
 import ToastContainer from './components/ToastContainer.vue';
 
 const router = useRouter();
+const route = useRoute();
 const isAuthenticated = authService.isAuthenticated;
 const user = authService.user;
 const isAdmin = authService.isAdmin;
+
+const isCenteredPage = computed(() => {
+  return ['Login', 'Register'].includes(route.name);
+});
 
 const handleLogout = async () => {
   await authService.logout();
@@ -59,79 +65,20 @@ const handleLogout = async () => {
 </script>
 
 <style>
-/* Global Styles from Stage 1 & 2 integration */
-:root {
-  --primary-color: #6366f1;
-  --primary-hover: #4f46e5;
-  --secondary-color: #64748b;
-  --bg-color: #f8fafc;
-  --card-bg: #ffffff;
-  --text-color: #1e293b;
-  --text-muted: #64748b;
-  --border-color: #e2e8f0;
-  --bg-hover: #f1f5f9;
-}
-
-body {
-  margin: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background-color: var(--bg-color);
-  color: var(--text-color);
-  line-height: 1.5;
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 1.5rem;
-}
-
-.card {
-  background: var(--card-bg);
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  padding: 1.5rem;
-  border: 1px solid var(--border-color);
-}
-
-.btn {
-  padding: 0.6rem 1.25rem;
-  border-radius: 8px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: none;
-}
-
-.btn.primary {
-  background: var(--primary-color);
-  color: white;
-}
-
-.btn.primary:hover {
-  background: var(--primary-hover);
-}
-
-.btn-sm {
-  padding: 0.4rem 0.8rem;
-  font-size: 0.875rem;
-}
-
-.badge {
-  padding: 0.2rem 0.6rem;
-  border-radius: 99px;
-  background: var(--primary-color);
-  color: white;
-  font-size: 0.75rem;
-  font-weight: 600;
+/* App-wide utility styles that don't belong in theme */
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 </style>
 
 <style scoped>
 .app-header {
-  background: var(--card-bg);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-color);
-  padding: 1rem 0;
+  padding: 0.75rem 0;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -145,29 +92,33 @@ body {
 
 .logo {
   text-decoration: none;
-  color: inherit;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .logo h1 {
   margin: 0;
   font-size: 1.5rem;
-  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  background: linear-gradient(135deg, var(--primary-color) 0%, #8b5cf6 100%);
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  font-family: 'Outfit', sans-serif;
 }
 
 .main-nav {
   display: flex;
   align-items: center;
-  gap: 2rem;
+  gap: 1.5rem;
 }
 
 .main-nav a {
   text-decoration: none;
-  color: var(--text-color);
-  font-weight: 500;
-  font-size: 0.95rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: color 0.2s;
 }
 
 .main-nav a:hover, .main-nav a.router-link-active {
@@ -196,16 +147,25 @@ body {
   background: var(--primary-color);
   color: white !important;
   padding: 0.5rem 1.25rem;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2);
 }
 
 .btn-register:hover {
   background: var(--primary-hover);
+  transform: translateY(-1px);
 }
 
 .app-main {
-  min-height: calc(100vh - 160px);
-  padding: 2rem 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-main > div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .app-footer {

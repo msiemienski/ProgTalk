@@ -21,7 +21,7 @@ export default defineConfig({
                 secure: false,
             },
             '/socket.io': {
-                target: 'wss://localhost:3000',
+                target: 'https://localhost:3000', // Use https instead of wss for proxy target usually
                 changeOrigin: true,
                 secure: false,
                 ws: true,

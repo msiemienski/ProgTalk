@@ -58,6 +58,18 @@ class TopicService {
             await Topic.findByIdAndUpdate(parentId, { $inc: { subtopicCount: 1 } });
         }
 
+        // Emit update via socket
+        try {
+            const SocketService = (await import('./SocketService.js')).default;
+            if (parentId) {
+                SocketService.emitTopicUpdate(parentId, 'subtopic_created', topic);
+            } else {
+                SocketService.emitTopicUpdate('root', 'topic_created', topic);
+            }
+        } catch (err) {
+            console.error('Socket emit failed:', err);
+        }
+
         return topic;
     }
 
@@ -391,7 +403,6 @@ class TopicService {
     async getModerators(topicId) {
         try {
             const moderators = await TopicModerator.getTopicModerators(topicId, true);
-            console.log(`[DEBUG] Found ${moderators.length} moderator records for topic ${topicId}`);
 
             const mapped = await Promise.all(moderators.map(async mod => {
                 // Determine user ID
