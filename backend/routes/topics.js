@@ -134,7 +134,7 @@ router.patch('/:id', authenticate, requireModerator, async (req, res) => {
  * POST /api/topics/:id/subtopics
  * Create a subtopic for a specific topic
  */
-router.post('/:id/subtopics', authenticate, async (req, res) => {
+router.post('/:id/subtopics', authenticate, requireModerator, async (req, res) => {
     try {
         const { name, description } = req.body;
 

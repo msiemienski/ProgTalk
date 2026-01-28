@@ -39,6 +39,32 @@
         </button>
       </div>
 
+      <!-- Tags Section -->
+      <div class="tags-selector-section">
+        <label>Tagi</label>
+        <div v-if="loadingTags" class="loading-tags">Wczytywanie tagów...</div>
+        <div v-else class="tags-grid">
+          <label 
+            v-for="tag in availableTags" 
+            :key="tag._id" 
+            class="tag-checkbox-label"
+            :class="{ active: form.tags.includes(tag._id) }"
+            :style="{ '--tag-color': tag.color }"
+          >
+            <input 
+              type="checkbox" 
+              v-model="form.tags" 
+              :value="tag._id"
+              hidden
+            >
+            <span class="tag-name">#{{ tag.name }}</span>
+          </label>
+        </div>
+        <div v-if="availableTags.length === 0 && !loadingTags" class="empty-tags">
+          Brak dostępnych tagów.
+        </div>
+      </div>
+
       <div class="form-actions">
         <button type="submit" class="btn primary" :disabled="submitting">
           {{ submitting ? 'Wysyłanie...' : 'Opublikuj Post' }}
@@ -52,7 +78,8 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue';
+import { reactive, ref, onMounted } from 'vue';
+import api from '../services/api';
 
 const props = defineProps({
   topicId: {
@@ -64,10 +91,25 @@ const props = defineProps({
 const emit = defineEmits(['success', 'cancel']);
 
 const submitting = ref(false);
+const availableTags = ref([]);
+const loadingTags = ref(false);
 
 const form = reactive({
   content: '',
-  codeBlocks: []
+  codeBlocks: [],
+  tags: []
+});
+
+onMounted(async () => {
+  loadingTags.value = true;
+  try {
+    const res = await api.get('/tags');
+    availableTags.value = res.data;
+  } catch (err) {
+    console.error('Failed to fetch tags:', err);
+  } finally {
+    loadingTags.value = false;
+  }
 });
 
 const addCodeBlock = () => {
@@ -90,7 +132,8 @@ const handleSubmit = async () => {
     // Filter out empty code blocks
     const payload = {
       content: form.content,
-      codeBlocks: form.codeBlocks.filter(b => b.code.trim())
+      codeBlocks: form.codeBlocks.filter(b => b.code.trim()),
+      tags: form.tags
     };
     
     emit('success', payload);
@@ -164,5 +207,60 @@ textarea, input, select {
   background: none;
   border: none;
   color: var(--text-muted);
+}
+
+.tags-selector-section {
+  margin-bottom: 1.5rem;
+}
+
+.tags-selector-section label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.tags-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.tag-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4rem 0.8rem;
+  border-radius: 99px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.tag-checkbox-label:hover {
+  border-color: var(--tag-color, var(--primary-color));
+}
+
+.tag-checkbox-label.active {
+  background: white;
+  border-color: var(--tag-color, var(--primary-color));
+  box-shadow: 0 0 0 1px var(--tag-color, var(--primary-color));
+}
+
+.tag-name {
+  color: var(--text-color);
+  font-weight: 500;
+}
+
+.tag-checkbox-label.active .tag-name {
+  color: var(--tag-color, var(--primary-color));
+}
+
+.loading-tags, .empty-tags {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  padding: 0.5rem 0;
 }
 </style>

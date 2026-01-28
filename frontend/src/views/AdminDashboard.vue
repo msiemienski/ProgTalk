@@ -31,23 +31,43 @@
         </div>
       </section>
 
-      <!-- Topic Management Section (Overview) -->
+      <!-- Tag Management Section -->
       <section class="admin-section card">
-        <h3>Działania Administracyjne</h3>
-        <div class="admin-tools">
-          <div class="tool-item">
-            <div class="tool-info">
-              <h4>Blokowanie Użytkowników</h4>
-              <p>Zablokuj dostęp użytkownikowi naruszającemu regulamin.</p>
-            </div>
-            <button class="btn secondary btn-sm" disabled>Zarządzaj</button>
+        <div class="section-title">
+          <h3>Zarządzanie Tagami</h3>
+        </div>
+
+        <!-- Add Tag Form -->
+        <form @submit.prevent="createTag" class="tag-form">
+          <div class="form-group">
+            <input v-model="newTag.name" placeholder="Nazwa taga" required class="form-input">
           </div>
-          <div class="tool-item">
-            <div class="tool-info">
-              <h4>Logi Aktywności</h4>
-              <p>Przejrzyj historię działań administracyjnych.</p>
-            </div>
-            <button class="btn secondary btn-sm" disabled>Pokaż Logi</button>
+          <div class="form-group">
+            <select v-model="newTag.category" class="form-input">
+              <option value="language">Język</option>
+              <option value="framework">Framework</option>
+              <option value="library">Biblioteka</option>
+              <option value="tool">Narzędzie</option>
+              <option value="platform">Platforma</option>
+              <option value="concept">Koncepcja</option>
+              <option value="other">Inne</option>
+            </select>
+          </div>
+          <div class="form-colors">
+            <input type="color" v-model="newTag.color" title="Kolor taga">
+          </div>
+          <button type="submit" class="btn primary btn-sm" :disabled="creatingTag">Dodaj</button>
+        </form>
+
+        <!-- Tags List -->
+        <div v-if="loadingTags" class="loading-state">Wczytywanie tagów...</div>
+        <div v-else class="tags-grid">
+          <div v-for="tag in tags" :key="tag._id" class="tag-item" :style="{ borderColor: tag.color }">
+            <span class="tag-badge" :style="{ backgroundColor: tag.color }">
+              {{ tag.name }}
+            </span>
+            <span class="tag-category">{{ tag.category }}</span>
+            <button @click="deleteTag(tag._id)" class="btn-icon danger" title="Usuń">&times;</button>
           </div>
         </div>
       </section>
@@ -56,11 +76,21 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 import api from '../services/api';
 
 const pendingUsers = ref([]);
 const loadingUsers = ref(false);
+
+// Tags state
+const tags = ref([]);
+const loadingTags = ref(false);
+const creatingTag = ref(false);
+const newTag = reactive({
+  name: '',
+  color: '#667eea',
+  category: 'other'
+});
 
 const fetchPendingUsers = async () => {
   loadingUsers.value = true;
@@ -71,6 +101,46 @@ const fetchPendingUsers = async () => {
     console.error('Fetch pending users error:', err);
   } finally {
     loadingUsers.value = false;
+  }
+};
+
+const fetchTags = async () => {
+  loadingTags.value = true;
+  try {
+    const res = await api.get('/tags');
+    tags.value = res.data;
+  } catch (err) {
+    console.error('Fetch tags error:', err);
+  } finally {
+    loadingTags.value = false;
+  }
+};
+
+const createTag = async () => {
+  if (!newTag.name) return;
+  creatingTag.value = true;
+  try {
+    await api.post('/tags', newTag);
+    // Reset form
+    newTag.name = '';
+    newTag.color = '#667eea';
+    newTag.category = 'other';
+    // Refresh list
+    fetchTags();
+  } catch (err) {
+    alert(err.response?.data?.message || 'Błąd tworzenia taga');
+  } finally {
+    creatingTag.value = false;
+  }
+};
+
+const deleteTag = async (id) => {
+  if (!confirm('Czy na pewno usunąć ten tag?')) return;
+  try {
+    await api.delete(`/tags/${id}`);
+    fetchTags();
+  } catch (err) {
+    alert('Błąd usuwania taga');
   }
 };
 
@@ -100,7 +170,10 @@ const formatDate = (dateStr) => {
   return new Date(dateStr).toLocaleDateString();
 };
 
-onMounted(fetchPendingUsers);
+onMounted(() => {
+  fetchPendingUsers();
+  fetchTags();
+});
 </script>
 
 <style scoped>
@@ -181,33 +254,65 @@ onMounted(fetchPendingUsers);
   color: var(--text-muted);
 }
 
-/* Tools */
-.admin-tools {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.tool-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 0;
+/* Tag Management */
+.tag-form {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
   border-bottom: 1px solid var(--border-color);
 }
 
-.tool-item:last-child {
-  border-bottom: none;
+.form-input {
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  width: 100%;
 }
 
-.tool-info h4 {
-  margin: 0 0 0.25rem 0;
-  font-size: 1rem;
+.tags-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
-.tool-info p {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--text-muted);
+.tag-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.tag-badge {
+  padding: 0.25rem 0.6rem;
+  border-radius: 99px;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+.tag-category {
+  font-size: 0.75rem;
+  color: #64748b;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  color: #94a3b8;
+  padding: 0 0.25rem;
+}
+
+.btn-icon:hover {
+  color: #ef4444;
 }
 </style>

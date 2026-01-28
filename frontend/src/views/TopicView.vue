@@ -120,7 +120,7 @@
               <div class="header-actions">
                 <button 
                   class="btn secondary btn-sm" 
-                  v-if="isAuthenticated" 
+                  v-if="isModerator" 
                   @click="showCreateForm = !showCreateForm"
                 >
                   {{ showCreateForm ? 'Anuluj' : '+ Dodaj Podtemat' }}
@@ -332,6 +332,7 @@ const blockUser = async () => {
     showBlockForm.value = false;
     blockForm.email = '';
     blockForm.reason = '';
+    fetchBlocks(topicId.value);
   } catch (err) {
     toastService.error(err.response?.data?.message || 'Błąd blokowania użytkownika');
   } finally {
@@ -380,12 +381,12 @@ const handleDeletePost = async (postId) => {
 };
 
 const handlePromoteUser = async (userObj) => {
-  const userId = userObj._id || userObj;
+  const userId = String(userObj._id || userObj);
   const email = userObj.email;
   
   if (!email) return;
   
-  const existingMod = moderators.value.find(m => m.userId === userId && m.type === 'direct');
+  const existingMod = moderators.value.find(m => String(m.userId) === userId && m.type === 'direct');
   
   if (existingMod) {
     if (!confirm(`Czy na pewno chcesz odebrać uprawnienia moderacji użytkownikowi ${email}?`)) return;
@@ -411,11 +412,11 @@ const handlePromoteUser = async (userObj) => {
 };
 
 const handleQuickBlock = async (userObj) => {
-  const userId = userObj._id || userObj;
+  const userId = String(userObj._id || userObj);
   const email = userObj.email;
   if (!email) return;
 
-  const existingBlock = blockedUsers.value.find(b => b.userId?._id === userId || b.userId === userId);
+  const existingBlock = blockedUsers.value.find(b => String(b.userId?._id || b.userId) === userId);
 
   if (existingBlock) {
     if (!confirm(`Odblokować użytkownika ${email}?`)) return;
@@ -582,13 +583,15 @@ const navigateToTopic = (id) => {
 };
 
 const checkAuthorModStatus = (authorId) => {
-  const aid = authorId._id || authorId;
-  return moderators.value.some(m => m.userId === aid && m.type === 'direct');
+  if (!authorId) return false;
+  const aid = String(authorId._id || authorId);
+  return moderators.value.some(m => String(m.userId) === aid && m.type === 'direct');
 };
 
 const checkAuthorBlockStatus = (authorId) => {
-  const aid = authorId._id || authorId;
-  return blockedUsers.value.some(b => b.userId?._id === aid || b.userId === aid);
+  if (!authorId) return false;
+  const aid = String(authorId._id || authorId);
+  return blockedUsers.value.some(b => String(b.userId?._id || b.userId) === aid);
 };
 
 watch(() => route.params.id, (newId) => {

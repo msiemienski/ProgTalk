@@ -289,4 +289,133 @@ router.get('/posts', async (req, res) => {
     }
 });
 
+/**
+ * GET /api/admin/tags
+ * Get all tags with creation info
+ */
+router.get('/tags', async (req, res) => {
+    try {
+        const { Tag } = await import('../models/index.js');
+        const tags = await Tag.find()
+            .populate('createdBy', 'email profile')
+            .sort({ name: 1 });
+        res.json(tags);
+    } catch (error) {
+        res.status(500).json({
+            error: 'Failed to fetch tags',
+            message: error.message,
+        });
+    }
+});
+
+/**
+ * POST /api/admin/tags
+ * Create a new tag (admin only)
+ */
+router.post('/tags', async (req, res) => {
+    try {
+        const { name, category, color, description } = req.body;
+        const { Tag } = await import('../models/index.js');
+
+        const tag = await Tag.create({
+            name,
+            category,
+            color,
+            description,
+            createdBy: req.userId
+        });
+
+        await AdminAction.logAction(
+            req.userId,
+            'create_tag',
+            'Tag',
+            tag._id,
+            { name: tag.name }
+        );
+
+        res.status(201).json(tag);
+    } catch (error) {
+        res.status(400).json({
+            error: 'Tag Creation Failed',
+            message: error.message,
+        });
+    }
+});
+
+/**
+ * PATCH /api/admin/tags/:id
+ * Update tag
+ */
+router.patch('/tags/:id', async (req, res) => {
+    try {
+        const { name, category, color, description } = req.body;
+        const { Tag } = await import('../models/index.js');
+
+        const tag = await Tag.findById(req.params.id);
+        if (!tag) {
+            return res.status(404).json({ error: 'Tag not found' });
+        }
+
+        if (name) tag.name = name;
+        if (category) tag.category = category;
+        if (color) tag.color = color;
+        if (description) tag.description = description;
+
+        await tag.save();
+
+        await AdminAction.logAction(
+            req.userId,
+            'update_tag',
+            'Tag',
+            tag._id,
+            { name: tag.name }
+        );
+
+        res.json(tag);
+    } catch (error) {
+        res.status(400).json({
+            error: 'Tag Update Failed',
+            message: error.message,
+        });
+    }
+});
+
+/**
+ * DELETE /api/admin/tags/:id
+ * Delete tag
+ */
+router.delete('/tags/:id', async (req, res) => {
+    try {
+        const { Tag } = await import('../models/index.js');
+        const tag = await Tag.findByIdAndDelete(req.params.id);
+
+        if (!tag) {
+            return res.status(404).json({ error: 'Tag not found' });
+        }
+
+        // Note: Ideally, we should also remove this tag from all posts.
+        // For simplicity, we just delete the tag. Posts will have a dangling ID or we can clean them up.
+        const Post = (await import('../models/Post.js')).default;
+        await Post.updateMany(
+            { tags: req.params.id },
+            { $pull: { tags: req.params.id } }
+        );
+
+        await AdminAction.logAction(
+            req.userId,
+            'delete_tag',
+            'Tag',
+            req.params.id,
+            { name: tag.name }
+        );
+
+        res.json({ message: 'Tag deleted and removed from posts' });
+    } catch (error) {
+        res.status(400).json({
+            error: 'Tag Deletion Failed',
+            message: error.message,
+        });
+    }
+});
+
 export default router;

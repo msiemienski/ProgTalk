@@ -18,6 +18,15 @@ class TopicService {
             if (parent.status === 'closed') {
                 throw new Error('Cannot create subtopic in a closed topic');
             }
+
+            // Check permission: Creator must be moderator of parent
+            const canModerate = await TopicModerator.canModerate(creatorId, parentId);
+            const User = mongoose.model('User');
+            const user = await User.findById(creatorId);
+
+            if (!canModerate && user.role !== 'admin') {
+                throw new Error('You must be a moderator of the parent topic to create a subtopic');
+            }
         }
 
         // Check name uniqueness within parent
@@ -339,12 +348,13 @@ class TopicService {
         const requestor = await User.findById(requestingUserId);
 
         // 1. Check permission
-        const canModerate = await TopicModerator.canModerate(requestingUserId, topicId);
-        if (!canModerate && requestor.role !== 'admin') {
-            throw new Error('You do not have permission to manage moderators');
+        // Requirement: Only Main Moderator (creator) can remove moderators
+        // Or Admin
+        if (topic.mainModeratorId.toString() !== requestingUserId && requestor.role !== 'admin') {
+            throw new Error('Only the Main Moderator (creator) can remove moderators from this topic');
         }
 
-        // Cannot remove main moderator
+        // Cannot remove main moderator (redundant check but good safety)
         if (topic.mainModeratorId.toString() === targetUserId) {
             throw new Error('Cannot remove the main moderator (creator) of the topic');
         }
@@ -409,10 +419,10 @@ class TopicService {
                 };
             }));
 
-            const finalModerators = mapped.filter(m => m !== null);
+            const finalModeratorsRaw = mapped.filter(m => m !== null);
 
             // Ensure main moderator (creator) is included
-            const hasMain = finalModerators.some(m => m.isMain);
+            const hasMain = finalModeratorsRaw.some(m => m.isMain);
             if (!hasMain) {
                 const topic = await Topic.findById(topicId).populate('mainModeratorId', 'email profile');
                 if (topic && topic.mainModeratorId) {
@@ -421,7 +431,7 @@ class TopicService {
                     const profileName = creator.profile?.name;
                     const displayName = profileName || email.split('@')[0];
 
-                    finalModerators.unshift({
+                    finalModeratorsRaw.unshift({
                         userId: creator._id,
                         email,
                         name: displayName,
@@ -434,7 +444,40 @@ class TopicService {
                 }
             }
 
-            return finalModerators;
+            // De-duplicate by userId
+            // Priority matches the UI needs: isMain > type: 'direct' > type: 'inherited'
+            const uniqueModeratorsMap = new Map();
+
+            finalModeratorsRaw.forEach(mod => {
+                const uid = mod.userId.toString();
+                const existing = uniqueModeratorsMap.get(uid);
+
+                if (!existing) {
+                    uniqueModeratorsMap.set(uid, mod);
+                    return;
+                }
+
+                // If we found a duplicate, decide which one to keep
+                let replacement = false;
+
+                if (mod.isMain) {
+                    if (!existing.isMain) {
+                        replacement = true;
+                    } else if (mod.type === 'direct' && existing.type === 'inherited') {
+                        // Both are Main, keep the direct one for the specific topic context
+                        replacement = true;
+                    }
+                } else if (!existing.isMain && mod.type === 'direct' && existing.type === 'inherited') {
+                    // Both are regular, keep the direct one
+                    replacement = true;
+                }
+
+                if (replacement) {
+                    uniqueModeratorsMap.set(uid, mod);
+                }
+            });
+
+            return Array.from(uniqueModeratorsMap.values());
         } catch (error) {
             console.error('[ERROR] getModerators service error:', error);
             throw error;
@@ -472,7 +515,6 @@ class TopicService {
         if (block) {
             // Update existing block
             block.reason = data.reason || block.reason;
-            block.exceptionSubtopics = data.exceptions || block.exceptionSubtopics;
             block.blockedBy = blockedByUserId;
             await block.save();
         } else {
@@ -481,8 +523,7 @@ class TopicService {
                 topicId,
                 userId: targetUser._id,
                 blockedBy: blockedByUserId,
-                reason: data.reason,
-                exceptionSubtopics: data.exceptions || []
+                reason: data.reason
             });
         }
 

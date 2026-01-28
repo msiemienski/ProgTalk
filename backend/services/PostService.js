@@ -47,13 +47,26 @@ class PostService {
             caption: block.caption ? sanitizeHtml(block.caption, { allowedTags: [], allowedAttributes: {} }) : ''
         }));
 
+        // Validate tags exist
+        let validatedTags = [];
+        if (tags && tags.length > 0) {
+            const existingTags = await Tag.find({ _id: { $in: tags } });
+            validatedTags = existingTags.map(t => t._id);
+
+            // Increment usage count for tags
+            await Tag.updateMany(
+                { _id: { $in: validatedTags } },
+                { $inc: { usageCount: 1 } }
+            );
+        }
+
         // Create post
         const post = await Post.create({
             topicId,
             authorId,
             content: sanitizedContent,
             codeBlocks: validCodeBlocks,
-            tags,
+            tags: validatedTags,
             referencedPosts,
         });
 

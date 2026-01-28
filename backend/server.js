@@ -35,6 +35,7 @@ import accountRouter from './routes/account.js';
 import usersRouter from './routes/users.js';
 import topicsRouter from './routes/topics.js';
 import postsRouter from './routes/posts.js';
+import tagsRouter from './routes/tags.js';
 import adminRouter from './routes/admin.js';
 
 app.use('/api/health', healthRouter);
@@ -43,6 +44,7 @@ app.use('/api/account', accountRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/topics', topicsRouter);
 app.use('/api/posts', postsRouter);
+app.use('/api/tags', tagsRouter);
 app.use('/api/admin', adminRouter);
 
 // Root endpoint
