@@ -72,6 +72,8 @@
         </div>
       </section>
     </div>
+    
+    <ConfirmModal ref="confirmModal" message="" />
   </div>
 </template>
 
@@ -80,6 +82,7 @@ import { ref, reactive, onMounted, onUnmounted } from 'vue';
 import api from '../services/api';
 import socket from '../services/socket';
 import toastService from '../services/toastService';
+import ConfirmModal from '../components/ConfirmModal.vue';
 
 const pendingUsers = ref([]);
 const loadingUsers = ref(false);
@@ -93,6 +96,8 @@ const newTag = reactive({
   color: '#667eea',
   category: 'other'
 });
+
+const confirmModal = ref(null);
 
 const fetchPendingUsers = async () => {
   loadingUsers.value = true;
@@ -130,19 +135,27 @@ const createTag = async () => {
     // Refresh list
     fetchTags();
   } catch (err) {
-    alert(err.response?.data?.message || 'Błąd tworzenia taga');
+    toastService.error(err.response?.data?.message || 'Błąd tworzenia taga');
   } finally {
     creatingTag.value = false;
   }
 };
 
 const deleteTag = async (id) => {
-  if (!confirm('Czy na pewno usunąć ten tag?')) return;
+  const confirmed = await confirmModal.value.open({
+    title: 'Usuń tag',
+    message: 'Czy na pewno usunąć ten tag?',
+    dangerMode: true,
+    confirmText: 'Usuń'
+  });
+  if (!confirmed) return;
+  
   try {
     await api.delete(`/tags/${id}`);
+    toastService.success('Tag został usunięty');
     fetchTags();
   } catch (err) {
-    alert('Błąd usuwania taga');
+    toastService.error('Błąd usuwania taga');
   }
 };
 
@@ -150,20 +163,27 @@ const approveUser = async (id) => {
   try {
     await api.post(`/admin/users/${id}/approve`);
     pendingUsers.value = pendingUsers.value.filter(u => u._id !== id);
-    alert('Użytkownik zatwierdzony!');
+    toastService.success('Użytkownik zatwierdzony!');
   } catch (err) {
-    alert('Błąd zatwierdzania użytkownika');
+    toastService.error('Błąd zatwierdzania użytkownika');
   }
 };
 
 const rejectUser = async (id) => {
-  if (!confirm('Czy na pewno chcesz odrzucić tę rejestrację?')) return;
+  const confirmed = await confirmModal.value.open({
+    title: 'Odrzuć rejestrację',
+    message: 'Czy na pewno chcesz odrzucić tę rejestrację?',
+    dangerMode: true,
+    confirmText: 'Odrzuć'
+  });
+  if (!confirmed) return;
+  
   try {
     await api.post(`/admin/users/${id}/reject`);
     pendingUsers.value = pendingUsers.value.filter(u => u._id !== id);
-    alert('Rejestracja odrzucona.');
+    toastService.success('Rejestracja odrzucona.');
   } catch (err) {
-    alert('Błąd podczas odrzucania');
+    toastService.error('Błąd podczas odrzucania');
   }
 };
 

@@ -66,6 +66,7 @@ import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import authService from '../services/authService';
 import api from '../services/api';
+import toastService from '../services/toastService';
 
 const router = useRouter();
 const user = authService.user;
@@ -92,9 +93,9 @@ const updateProfile = async () => {
     const newUser = { ...user.value, profile: response.data.profile };
     localStorage.setItem('user', JSON.stringify(newUser));
     authService.user.value = newUser;
-    alert('Profil zaktualizowany!');
+    toastService.success('Profil zaktualizowany!');
   } catch (err) {
-    alert(err.response?.data?.message || 'Błąd aktualizacji profilu');
+    toastService.error(err.response?.data?.message || 'Błąd aktualizacji profilu');
   } finally {
     updating.value = false;
   }
@@ -102,7 +103,7 @@ const updateProfile = async () => {
 
 const changePassword = async () => {
   if (passwordForm.newPassword !== passwordForm.newPasswordConfirm) {
-    alert('Hasła nie są identyczne');
+    toastService.error('Hasła nie są identyczne');
     return;
   }
 
@@ -112,9 +113,9 @@ const changePassword = async () => {
     passwordForm.oldPassword = '';
     passwordForm.newPassword = '';
     passwordForm.newPasswordConfirm = '';
-    alert('Hasło zmienione!');
+    toastService.success('Hasło zmienione!');
   } catch (err) {
-    alert(err.response?.data?.message || 'Błąd zmiany hasła');
+    toastService.error(err.response?.data?.message || 'Błąd zmiany hasła');
   } finally {
     changingPassword.value = false;
   }

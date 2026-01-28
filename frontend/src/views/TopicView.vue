@@ -275,6 +275,8 @@
         </template>
       </main>
     </div>
+    
+    <ConfirmModal ref="confirmModal" message="" />
   </div>
 </template>
 
@@ -289,11 +291,13 @@ import Prism from 'prismjs';
 import TopicTree from '../components/TopicTree.vue';
 import PostCard from '../components/PostCard.vue';
 import PostCreateForm from '../components/PostCreateForm.vue';
+import ConfirmModal from '../components/ConfirmModal.vue';
 
 const route = useRoute();
 const router = useRouter();
 const topicId = ref(route.params.id);
 const socketStatus = socket.state;
+const confirmModal = ref(null);
 
 const tree = ref([]);
 const topic = ref(null);
@@ -427,7 +431,13 @@ const handleCreatePost = async (payload) => {
 };
 
 const handleDeletePost = async (postId) => {
-  if (!confirm('Czy na pewno chcesz usunąć ten post?')) return;
+  const confirmed = await confirmModal.value.open({
+    title: 'Usuń post',
+    message: 'Czy na pewno chcesz usunąć ten post?',
+    dangerMode: true,
+    confirmText: 'Usuń'
+  });
+  if (!confirmed) return;
   try {
     await api.delete(`/posts/${postId}`);
     toastService.success('Post został usunięty.');
@@ -446,7 +456,13 @@ const handlePromoteUser = async (userObj) => {
   const existingMod = moderators.value.find(m => String(m.userId) === userId && m.type === 'direct');
   
   if (existingMod) {
-    if (!confirm(`Czy na pewno chcesz odebrać uprawnienia moderacji użytkownikowi ${email}?`)) return;
+    const confirmed = await confirmModal.value.open({
+      title: 'Odbierz uprawnienia',
+      message: `Czy na pewno chcesz odebrać uprawnienia moderacji użytkownikowi ${email}?`,
+      dangerMode: true,
+      confirmText: 'Odbierz'
+    });
+    if (!confirmed) return;
     try {
       await api.delete(`/topics/${topicId.value}/moderators/${userId}`);
       toastService.success(`Uprawnienia odebrane.`);
@@ -456,7 +472,12 @@ const handlePromoteUser = async (userObj) => {
       toastService.error(err.response?.data?.message || 'Błąd odbierania uprawnień');
     }
   } else {
-    if (!confirm(`Czy na pewno chcesz nadać uprawnienia moderacji użytkownikowi ${email}?`)) return;
+    const confirmed = await confirmModal.value.open({
+      title: 'Nadaj uprawnienia',
+      message: `Czy na pewno chcesz nadać uprawnienia moderacji użytkownikowi ${email}?`,
+      confirmText: 'Nadaj'
+    });
+    if (!confirmed) return;
     try {
       await api.post(`/topics/${topicId.value}/moderators`, { email });
       toastService.success(`Użytkownik ${email} został moderatorem.`);
@@ -476,7 +497,12 @@ const handleQuickBlock = async (userObj) => {
   const existingBlock = blockedUsers.value.find(b => String(b.userId?._id || b.userId) === userId);
 
   if (existingBlock) {
-    if (!confirm(`Odblokować użytkownika ${email}?`)) return;
+    const confirmed = await confirmModal.value.open({
+      title: 'Odblokuj użytkownika',
+      message: `Odblokować użytkownika ${email}?`,
+      confirmText: 'Odblokuj'
+    });
+    if (!confirmed) return;
     try {
       await api.delete(`/topics/${topicId.value}/blocks/${userId}`);
       toastService.success(`Użytkownik ${email} został odblokowany.`);
@@ -485,11 +511,16 @@ const handleQuickBlock = async (userObj) => {
       toastService.error(err.response?.data?.message || 'Błąd odblokowywania użytkownika');
     }
   } else {
-    const reason = prompt(`Zablokować użytkownika ${email}? Podaj powód (opcjonalnie):`);
-    if (reason === null) return; 
+    const confirmed = await confirmModal.value.open({
+      title: 'Zablokuj użytkownika',
+      message: `Czy na pewno chcesz zablokować użytkownika ${email}?`,
+      dangerMode: true,
+      confirmText: 'Zablokuj'
+    });
+    if (!confirmed) return; 
     
     try {
-      await api.post(`/topics/${topicId.value}/blocks`, { email, reason });
+      await api.post(`/topics/${topicId.value}/blocks`, { email });
       toastService.success(`Użytkownik ${email} został zablokowany.`);
       fetchBlocks(topicId.value);
     } catch (err) {
@@ -615,10 +646,24 @@ const deleteTopic = async () => {
     confirmMessage += '\n\nUWAGA: Ten temat posiada podtematy! Usunięcie go spowoduje trwałe usunięcie WSZYSTKICH podtematów i postów w całym drzewie poniżej.';
   }
   
-  if (!confirm(confirmMessage)) return;
+  const confirmed = await confirmModal.value.open({
+    title: 'Usuń temat',
+    message: confirmMessage,
+    dangerMode: true,
+    confirmText: 'Usuń'
+  });
+  if (!confirmed) return;
   
   // Double confirmation for cascading delete to be safe
-  if (hasSubtopics && !confirm('Jesteś absolutnie pewien? Ta operacja jest nieodwracalna.')) return;
+  if (hasSubtopics) {
+    const doubleConfirmed = await confirmModal.value.open({
+      title: 'Potwierdź operację',
+      message: 'Jesteś absolutnie pewien? Ta operacja jest nieodwracalna.',
+      dangerMode: true,
+      confirmText: 'Tak, usuń wszystko'
+    });
+    if (!doubleConfirmed) return;
+  }
   
   try {
     await api.delete(`/topics/${topicId.value}?cascade=true`);
