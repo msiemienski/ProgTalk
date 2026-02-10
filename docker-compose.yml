@@ -30,6 +30,7 @@ services:
       dockerfile: ./backend/Dockerfile
     container_name: progtalk-backend
     restart: unless-stopped
+    command: sh -c "npm run db:seed && npm run dev"
     ports:
       - "3000:3000"
     environment:

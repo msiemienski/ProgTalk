@@ -11,7 +11,7 @@ class PostService {
     /**
      * Create a new post
      */
-    async createPost(topicId, authorId, content, codeBlocks = [], tags = [], referencedPosts = []) {
+    async createPost(topicId, authorId, content, tags = [], referencedPosts = []) {
         const topic = await Topic.findById(topicId);
         if (!topic) {
             throw new Error('Topic not found');
@@ -34,12 +34,7 @@ class PostService {
             allowedAttributes: {}
         });
 
-        // Basic validation/cleaning for code blocks
-        const validCodeBlocks = codeBlocks.map(block => ({
-            language: block.language || 'plaintext',
-            code: block.code || '',
-            caption: block.caption ? sanitizeHtml(block.caption, { allowedTags: [], allowedAttributes: {} }) : ''
-        }));
+
 
         // Validate tags exist
         let validatedTags = [];
@@ -59,7 +54,6 @@ class PostService {
             topicId,
             authorId,
             content: sanitizedContent,
-            codeBlocks: validCodeBlocks,
             tags: validatedTags,
             referencedPosts,
         });
@@ -105,9 +99,7 @@ class PostService {
             post.content = updates.content;
         }
 
-        if (updates.codeBlocks !== undefined) {
-            post.codeBlocks = updates.codeBlocks;
-        }
+
 
         if (updates.tags !== undefined) {
             post.tags = updates.tags;

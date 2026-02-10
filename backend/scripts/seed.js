@@ -159,26 +159,21 @@ const seedDatabase = async () => {
         const post1 = await Post.create({
             topicId: jsTopic._id,
             authorId: user1._id,
-            content: 'How do you handle async/await in large loops? Here is my approach:',
-            codeBlocks: [{
-                language: 'javascript',
-                code: 'const process = async (items) => {\n  for (const item of items) {\n    await doWork(item);\n  }\n};',
-                caption: 'Sequential processing'
-            }],
+            content: 'How do you handle `async/await` in large loops? Here is a sequential approach using a `for...of` loop:\n\n```javascript\nconst process = async (items) => {\n  for (const item of items) {\n    await doWork(item);\n  }\n};\n```\n\nIs there a better way to do this in parallel?',
             tags: [tags[0]._id, tags[4]._id]
         });
 
         const post2 = await Post.create({
             topicId: vueTopic._id,
             authorId: user2._id,
-            content: 'Vue 3 with Script Setup is a game changer for developer experience. The boilerplate reduction is amazing.',
+            content: 'Vue 3 with `<script setup>` is a game changer for developer experience. The boilerplate reduction is amazing compared to the Options API.',
             tags: [tags[2]._id]
         });
 
         const post3 = await Post.create({
             topicId: jsTopic._id,
             authorId: admin._id,
-            content: 'Great question John! Just a reminder that for performance, you might want to look into Promise.all if items are independent.',
+            content: 'Great question John! Just a reminder that for performance, you might want to look into `Promise.all` if your items are independent:\n\n```javascript\nawait Promise.all(items.map(item => doWork(item)));\n```',
             referencedPosts: [post1._id]
         });
 

@@ -535,7 +535,43 @@ class TopicService {
             throw new Error('Admins cannot be blocked');
         }
 
-        // Validate exceptions: must be descendants of this topic
+        // 1. Handle Moderator Consequences
+        const TopicModerator = (await import('../models/TopicModerator.js')).default;
+        const isMod = await TopicModerator.findOne({ topicId, userId: targetUser._id });
+
+        if (isMod) {
+            if (isMod.isMain) {
+                // If main moderator, look for successors
+                const successors = await TopicModerator.find({
+                    topicId,
+                    userId: { $ne: targetUser._id },
+                    isMain: false
+                }).sort({ assignedAt: 1 });
+
+                if (successors.length > 0) {
+                    const successor = successors[0];
+                    successor.isMain = true;
+                    await successor.save();
+
+                    // Update Topic record
+                    topic.mainModeratorId = successor.userId;
+                    await topic.save();
+                } else if (!data.forceDelete) {
+                    // No successor, require forceDelete
+                    const error = new Error('Ten użytkownik jest jedynym moderatorem. Zablokowanie go spowoduje usunięcie tematu.');
+                    error.code = 'REQUIRED_FORCE_DELETE';
+                    throw error;
+                } else {
+                    // No successor and forceDelete is true - Delete topic
+                    await this.deleteTopic(topicId, blockedByUserId, true);
+                    return { topicDeleted: true };
+                }
+            }
+            // Remove the moderator entry for the blocked user
+            await TopicModerator.deleteOne({ topicId, userId: targetUser._id });
+        }
+
+        // 2. Validate exceptions: must be descendants of this topic
         let validatedExceptions = [];
         if (data.exceptions && Array.isArray(data.exceptions) && data.exceptions.length > 0) {
             const descendants = await Topic.find({ path: topicId });

@@ -228,6 +228,15 @@
               />
             </transition>
             
+            <!-- New Posts Buffer Pill -->
+            <transition name="fade">
+              <div v-if="bufferedPosts.length > 0" class="new-posts-pill-container">
+                <button class="new-posts-pill" @click="showBufferedPosts">
+                  Pokaż nowe posty ({{ bufferedPosts.length }})
+                </button>
+              </div>
+            </transition>
+            
             <div v-if="loadingPosts" class="loading-state">Pobieranie wpisów...</div>
             
             <div v-else-if="posts.length > 0" class="posts-list">
@@ -341,6 +350,7 @@ const blockForm = reactive({
 });
 const userAccess = ref(null);
 const blockedUsers = ref([]);
+const bufferedPosts = ref([]);
 
 const isModerator = computed(() => {
   if (authService.isAdmin.value) return true;
@@ -395,7 +405,35 @@ const blockUser = async () => {
     closeBlockForm();
     fetchBlocks(topicId.value);
   } catch (err) {
-    toastService.error(err.response?.data?.message || 'Błąd blokowania użytkownika');
+    if (err.response?.data?.message?.includes('jedynym moderatorem')) {
+      const confirmed = await confirmModal.value.open({
+        title: 'Uwaga',
+        message: err.response.data.message + ' Czy na pewno chcesz usunąć ten temat?',
+        dangerMode: true,
+        confirmText: 'Tak, usuń wszystko'
+      });
+      
+      if (confirmed) {
+        try {
+          const res = await api.post(`/topics/${topicId.value}/blocks`, {
+            email: blockForm.email,
+            reason: blockForm.reason,
+            exceptions: blockForm.selectedExceptions,
+            forceDelete: true
+          });
+          
+          if (res.data.topicDeleted) {
+            toastService.success('Temat został usunięty.');
+            router.push('/');
+          }
+          return;
+        } catch (retryErr) {
+          toastService.error(retryErr.response?.data?.message || 'Błąd usuwania tematu');
+        }
+      }
+    } else {
+      toastService.error(err.response?.data?.message || 'Błąd blokowania użytkownika');
+    }
   } finally {
     blocking.value = false;
   }
@@ -550,6 +588,13 @@ const changePage = (newPage) => {
   if (newPage < 1 || newPage > pagination.pages) return;
   pagination.page = newPage;
   fetchPosts(topicId.value);
+  bufferedPosts.value = []; // Clear buffer on page change
+  window.scrollTo({ top: 300, behavior: 'smooth' });
+};
+
+const showBufferedPosts = () => {
+  posts.value = [...bufferedPosts.value, ...posts.value];
+  bufferedPosts.value = [];
   window.scrollTo({ top: 300, behavior: 'smooth' });
 };
 
@@ -707,14 +752,24 @@ onMounted(() => {
 
   socket.on('post:created', (newPost) => {
     // Prevent duplicates
-    const existing = posts.value.some(p => String(p._id) === String(newPost._id));
-    if (!existing) {
-      posts.value.unshift(newPost);
-      
-      // Only show toast if the current user IS NOT the author of the new post
+    const existingInPosts = posts.value.some(p => String(p._id) === String(newPost._id));
+    const existingInBuffer = bufferedPosts.value.some(p => String(p._id) === String(newPost._id));
+    
+    if (!existingInPosts && !existingInBuffer) {
       const isAuthor = user.value && (String(newPost.authorId?._id || newPost.authorId) === String(user.value.id));
-      if (!isAuthor) {
-        toastService.info('Nowy post w temacie!');
+      
+      if (isAuthor) {
+          // If current user is author, inject immediately
+          posts.value.unshift(newPost);
+          return;
+      }
+
+      // If user is on page 1, buffer it
+      if (pagination.page === 1) {
+        bufferedPosts.value.unshift(newPost);
+      } else {
+        // If on other pages, just update total count but don't buffer for injection here
+        pagination.total++;
       }
     }
   });
@@ -758,11 +813,27 @@ watch(
 .breadcrumbs {
   margin-bottom: 2rem;
   font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  white-space: nowrap;
+  padding-bottom: 0.5rem;
+  scrollbar-width: none; /* Firefox */
+}
+
+.breadcrumbs::-webkit-scrollbar {
+  display: none; /* Safari and Chrome */
 }
 
 .breadcrumbs .separator {
   margin: 0 0.5rem;
   color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.breadcrumbs a {
+  flex-shrink: 0;
 }
 
 .layout-with-sidebar {
@@ -791,6 +862,37 @@ watch(
   text-transform: uppercase;
   letter-spacing: 1px;
   color: var(--text-muted);
+}
+
+.new-posts-pill-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  position: sticky;
+  top: 1rem;
+  z-index: 10;
+}
+
+.new-posts-pill {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 99px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.3);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.new-posts-pill:hover {
+  background: var(--primary-dark);
+  transform: translateY(-2px);
+}
+
+.new-posts-pill:active {
+  transform: translateY(0);
 }
 
 .content {

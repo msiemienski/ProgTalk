@@ -3,41 +3,16 @@
     <h3>Nowy Post</h3>
     <form @submit.prevent="handleSubmit">
       <div class="form-group">
-        <label>Treść</label>
+        <label>Treść (Markdown obsługiwany)</label>
         <textarea 
           v-model="form.content" 
-          placeholder="O czym chcesz napisać? (Markdown obsługiwany w backendzie)" 
-          rows="5" 
+          placeholder="O czym chcesz napisać? Użyj `kod` dla wyróżnienia w tekście lub ```język dla bloków kodu." 
+          rows="8" 
           required
         ></textarea>
       </div>
 
-      <!-- Code Blocks Section -->
-      <div class="code-blocks-editor">
-        <label>Bloki kodu (opcjonalnie)</label>
-        <div v-for="(block, index) in form.codeBlocks" :key="index" class="code-block-input card">
-          <div class="block-header">
-            <span>Blok #{{ index + 1 }}</span>
-            <button type="button" class="btn-icon danger" @click="removeCodeBlock(index)">&times;</button>
-          </div>
-          <div class="input-row">
-            <select v-model="block.language">
-              <option value="javascript">JavaScript</option>
-              <option value="python">Python</option>
-              <option value="css">CSS</option>
-              <option value="html">HTML</option>
-              <option value="cpp">C++</option>
-              <option value="sql">SQL</option>
-              <option value="plaintext">Plain Text</option>
-            </select>
-            <input v-model="block.caption" placeholder="Opis kodu (np. Skrypt logowania)">
-          </div>
-          <textarea v-model="block.code" placeholder="Wklej kod tutaj..." rows="4"></textarea>
-        </div>
-        <button type="button" class="btn secondary btn-sm" @click="addCodeBlock">
-          + Dodaj blok kodu
-        </button>
-      </div>
+
 
       <!-- Tags Section -->
       <div class="tags-selector-section">
@@ -96,7 +71,6 @@ const loadingTags = ref(false);
 
 const form = reactive({
   content: '',
-  codeBlocks: [],
   tags: []
 });
 
@@ -112,27 +86,15 @@ onMounted(async () => {
   }
 });
 
-const addCodeBlock = () => {
-  form.codeBlocks.push({
-    language: 'javascript',
-    code: '',
-    caption: ''
-  });
-};
 
-const removeCodeBlock = (index) => {
-  form.codeBlocks.splice(index, 1);
-};
 
 const handleSubmit = async () => {
   if (!form.content.trim()) return;
   
   submitting.value = true;
   try {
-    // Filter out empty code blocks
     const payload = {
       content: form.content,
-      codeBlocks: form.codeBlocks.filter(b => b.code.trim()),
       tags: form.tags
     };
     

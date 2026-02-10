@@ -52,8 +52,8 @@
       <summary>Status Serwera (Debug)</summary>
       <div class="card health-info mt-2">
          <div v-if="health" class="health-grid">
-           <span>Status: {{ health.status }}</span>
-           <span>Database: {{ health.database.connected ? 'OK' : 'ERROR' }}</span>
+           <span>Status:  {{ health.status }}</span>
+           <span>Database:  {{ health.database.connected ? 'OK' : 'ERROR' }}</span>
          </div>
          <button class="btn btn-sm" @click="checkHealth">Sprawdź połączenie</button>
       </div>

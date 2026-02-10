@@ -29,11 +29,11 @@ router.get('/:id', optionalAuth, async (req, res) => {
  */
 router.put('/:id', authenticate, async (req, res) => {
     try {
-        const { content, codeBlocks, tags, referencedPosts } = req.body;
+        const { content, tags, referencedPosts } = req.body;
 
         const updates = {};
         if (content !== undefined) updates.content = content;
-        if (codeBlocks !== undefined) updates.codeBlocks = codeBlocks;
+
         if (tags !== undefined) updates.tags = tags;
         if (referencedPosts !== undefined) updates.referencedPosts = referencedPosts;
 

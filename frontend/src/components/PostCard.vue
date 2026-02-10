@@ -40,17 +40,10 @@
     </div>
 
     <div class="post-content">
-      <p class="text-content">{{ post.content }}</p>
+      <!-- Render parsed Markdown content -->
+      <div class="markdown-body" v-html="parsedContent"></div>
 
-      <div v-if="post.codeBlocks && post.codeBlocks.length > 0" class="code-blocks">
-        <div v-for="(block, index) in post.codeBlocks" :key="index" class="code-block-wrapper">
-          <div class="code-header">
-            <span class="lang-badge">{{ block.language }}</span>
-            <span v-if="block.caption" class="caption">{{ block.caption }}</span>
-          </div>
-          <pre><code ref="codeElements" :class="'language-' + block.language">{{ block.code }}</code></pre>
-        </div>
-      </div>
+
 
       <div v-if="post.tags && post.tags.length > 0" class="post-tags">
         <span 
@@ -121,6 +114,26 @@
 import { computed, onMounted, ref, watch, nextTick } from 'vue';
 import authService from '../services/authService';
 import hljs from 'highlight.js';
+import { Marked } from 'marked';
+import { markedHighlight } from 'marked-highlight';
+
+// Initialize marked with highlight.js integration
+const marked = new Marked(
+  markedHighlight({
+    emptyLangClass: 'hljs',
+    langPrefix: 'hljs language-',
+    highlight(code, lang, info) {
+      const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+      return hljs.highlight(code, { language }).value;
+    }
+  })
+);
+
+// Basic configuration for security and breaks
+marked.setOptions({
+  breaks: true,
+  gfm: true
+});
 
 const props = defineProps({
   post: {
@@ -147,20 +160,19 @@ const props = defineProps({
 
 const emit = defineEmits(['delete', 'promote', 'block', 'toggle-like', 'block-success']);
 
+const parsedContent = computed(() => {
+  if (!props.post?.content) return '';
+  return marked.parse(props.post.content);
+});
+
 const codeElements = ref([]);
 
-const highlightAll = () => {
-  nextTick(() => {
-    if (codeElements.value) {
-      codeElements.value.forEach((el) => {
-        hljs.highlightElement(el);
-      });
-    }
-  });
-};
-
-onMounted(highlightAll);
-watch(() => props.post, highlightAll, { deep: true });
+onMounted(() => {
+  // Logic for other onMounted tasks if needed
+});
+watch(() => props.post, () => {
+  // Logic for other watch tasks if needed
+}, { deep: true });
 
 const user = authService.user;
 const isAdmin = authService.isAdmin;
@@ -241,7 +253,31 @@ const confirmBlock = async () => {
     emit('block-success');
   } catch (err) {
     const toastService = (await import('../services/toastService')).default;
-    toastService.error(err.response?.data?.message || 'Błąd blokowania użytkownika');
+    
+    if (err.response?.data?.message?.includes('jedynym moderatorem')) {
+      const confirmed = window.confirm(err.response.data.message + ' Czy na pewno chcesz usunąć temat?');
+      if (confirmed) {
+        try {
+          const api = (await import('../services/api')).default;
+          const res = await api.post(`/topics/${props.topicId}/blocks`, {
+            email: props.post.authorId.email,
+            reason: blockReason.value,
+            exceptions: selectedExceptions.value,
+            forceDelete: true
+          });
+          
+          if (res.data.topicDeleted) {
+            toastService.success('Temat został usunięty.');
+            window.location.href = '/'; // Simple redirect for now
+          }
+          return;
+        } catch (retryErr) {
+          toastService.error(retryErr.response?.data?.message || 'Błąd usuwania tematu');
+        }
+      }
+    } else {
+      toastService.error(err.response?.data?.message || 'Błąd blokowania użytkownika');
+    }
   } finally {
     blocking.value = false;
   }

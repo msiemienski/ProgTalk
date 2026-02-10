@@ -377,7 +377,7 @@ router.get('/:id/posts', optionalAuth, async (req, res) => {
  */
 router.post('/:id/posts', authenticate, requireNotBlocked, async (req, res) => {
     try {
-        const { content, codeBlocks, tags, referencedPosts } = req.body;
+        const { content, tags, referencedPosts } = req.body;
 
         if (!content || content.trim().length === 0) {
             return res.status(400).json({
@@ -390,7 +390,6 @@ router.post('/:id/posts', authenticate, requireNotBlocked, async (req, res) => {
             req.params.id,
             req.userId,
             content,
-            codeBlocks || [],
             tags || [],
             referencedPosts || []
         );

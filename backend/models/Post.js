@@ -19,22 +19,12 @@ const postSchema = new mongoose.Schema({
         maxlength: [10000, 'Post content cannot exceed 10000 characters'],
     },
 
-    // Code blocks with syntax highlighting
-    codeBlocks: [{
-        language: {
-            type: String,
-            required: true,
-            default: 'plaintext',
-        },
-        code: {
-            type: String,
-            required: true,
-        },
-        caption: {
-            type: String,
-            maxlength: [100, 'Code caption cannot exceed 100 characters'],
-        },
-    }],
+    content: {
+        type: String,
+        required: [true, 'Post content is required'],
+        maxlength: [10000, 'Post content cannot exceed 10000 characters'],
+    },
+
 
     // Technology/language tags
     tags: [{
