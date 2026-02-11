@@ -227,8 +227,10 @@
               <PostCreateForm 
                 v-if="showPostForm" 
                 :topic-id="topicId"
+                :referenced-posts="referencedPostIds"
                 @success="handleCreatePost"
                 @cancel="showPostForm = false"
+                @remove-reference="removePostReference"
               />
             </transition>
             
@@ -264,6 +266,7 @@
                 @block="handleQuickBlock"
                 @block-success="fetchBlocks(topicId)"
                 @toggle-like="handleLikePost"
+                @reply="handleReplyToPost"
               />
 
               <!-- Pagination Info/Controls -->
@@ -364,6 +367,7 @@ const blockedUsers = ref([]);
 const bufferedPosts = ref([]);
 const activeViewers = ref(1);
 const typingUsers = ref(new Map());
+const referencedPostIds = ref([]);
 
 const typingDisplay = computed(() => {
   const users = Array.from(typingUsers.value.values());
@@ -484,6 +488,7 @@ const handleCreatePost = async (payload) => {
     pagination.page = 1;
     fetchPosts(topicId.value);
     fetchTopicData(topicId.value);
+    referencedPostIds.value = []; // Clear references after successful post
   } catch (err) {
     toastService.error(err.response?.data?.message || 'Błąd publikacji posta');
   }
@@ -586,6 +591,28 @@ const handleQuickBlock = async (userObj) => {
       toastService.error(err.response?.data?.message || 'Błąd blokowania użytkownika');
     }
   }
+};
+
+const handleReplyToPost = (post) => {
+  if (!isAuthenticated.value) {
+    toastService.info('Zaloguj się, aby odpowiedzieć.');
+    return;
+  }
+  
+  // Add to references if not already there
+  if (!referencedPostIds.value.some(p => p._id === post._id)) {
+    referencedPostIds.value.push(post);
+  }
+  
+  showPostForm.value = true;
+  // Smooth scroll to form
+  setTimeout(() => {
+    window.scrollTo({ top: 300, behavior: 'smooth' });
+  }, 100);
+};
+
+const removePostReference = (postId) => {
+  referencedPostIds.value = referencedPostIds.value.filter(p => p._id !== postId);
 };
 
 const handleLikePost = async (postId) => {

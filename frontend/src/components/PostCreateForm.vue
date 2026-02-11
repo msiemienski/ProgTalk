@@ -12,6 +12,18 @@
         ></textarea>
       </div>
 
+      <!-- References Section -->
+      <div v-if="referencedPosts.length > 0" class="references-section">
+        <label>Odwołujesz się do:</label>
+        <div class="references-list">
+          <div v-for="refPost in referencedPosts" :key="refPost._id" class="reference-item">
+            <span class="ref-author">{{ refPost.authorId?.profile?.name || refPost.authorId?.email?.split('@')[0] }}</span>:
+            <span class="ref-preview">{{ refPost.content.substring(0, 50) }}...</span>
+            <button type="button" class="btn-remove" @click="$emit('remove-reference', refPost._id)">&times;</button>
+          </div>
+        </div>
+      </div>
+
 
 
       <!-- Tags Section -->
@@ -62,10 +74,14 @@ const props = defineProps({
   topicId: {
     type: String,
     required: true
+  },
+  referencedPosts: {
+    type: Array,
+    default: () => []
   }
 });
 
-const emit = defineEmits(['success', 'cancel']);
+const emit = defineEmits(['success', 'cancel', 'remove-reference']);
 
 const submitting = ref(false);
 const availableTags = ref([]);
@@ -117,7 +133,8 @@ const handleSubmit = async () => {
   try {
     const payload = {
       content: form.content,
-      tags: form.tags
+      tags: form.tags,
+      referencedPosts: props.referencedPosts.map(p => p._id)
     };
     
     emit('success', payload);
@@ -246,5 +263,63 @@ textarea, input, select {
   font-size: 0.85rem;
   color: var(--text-muted);
   padding: 0.5rem 0;
+}
+
+.references-section {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: #f0f9ff;
+  border-radius: 8px;
+  border: 1px solid #bae6fd;
+}
+
+.references-section label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0369a1;
+  margin-bottom: 0.5rem;
+}
+
+.references-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.reference-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  background: white;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  border: 1px solid #e0f2fe;
+}
+
+.ref-author {
+  font-weight: 600;
+}
+
+.ref-preview {
+  color: var(--text-muted);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn-remove {
+  background: none;
+  border: none;
+  color: #ef4444;
+  font-size: 1.2rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 0.2rem;
+}
+
+.btn-remove:hover {
+  color: #dc2626;
 }
 </style>

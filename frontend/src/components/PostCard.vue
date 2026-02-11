@@ -33,6 +33,9 @@
           </button>
         </template>
 
+        <button v-if="isAuthenticated && !post.isDeleted" class="btn btn-sm outline secondary" @click="$emit('reply', post)" title="Odpowiedz/Cytuj">
+          Odpowiedz
+        </button>
         <button v-if="canManage" class="btn-icon danger" @click="$emit('delete', post._id)" title="Usuń post">
           &times;
         </button>
@@ -62,8 +65,34 @@
         <span class="icon">{{ post.hasLiked ? '❤️' : '👍' }}</span>
         <span>{{ post.likeCount || 0 }}</span>
       </div>
-      <div v-if="post.referencedPosts?.length" class="referenced-meta">
+      <div v-if="post.referencedPosts?.length" class="referenced-meta clickable" @click="showRefsModal = true">
         🔗 Odwołania: {{ post.referencedPosts.length }}
+      </div>
+    </div>
+
+    <!-- References Modal -->
+    <div v-if="showRefsModal" class="modal-overlay" @click.self="showRefsModal = false">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Odwołania do postów</h3>
+          <button class="btn-close" @click="showRefsModal = false">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="referenced-posts-list">
+            <div v-for="refPost in post.referencedPosts" :key="refPost._id" class="referenced-post-item card">
+              <div class="ref-post-header">
+                <strong>{{ refPost.authorId?.profile?.name || refPost.authorId?.email?.split('@')[0] || 'Anonim' }}</strong>
+                <span class="ref-post-date">{{ formatDate(refPost.createdAt) }}</span>
+              </div>
+              <div class="ref-post-content">
+                {{ refPost.content.length > 200 ? refPost.content.substring(0, 200) + '...' : refPost.content }}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn secondary" @click="showRefsModal = false">Zamknij</button>
+        </div>
       </div>
     </div>
 
@@ -158,7 +187,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['delete', 'promote', 'block', 'toggle-like', 'block-success']);
+const emit = defineEmits(['delete', 'promote', 'block', 'toggle-like', 'block-success', 'reply']);
 
 const parsedContent = computed(() => {
   if (!props.post?.content) return '';
@@ -176,6 +205,7 @@ watch(() => props.post, () => {
 
 const user = authService.user;
 const isAdmin = authService.isAdmin;
+const isAuthenticated = authService.isAuthenticated;
 
 const isAuthor = computed(() => {
   if (!user.value || !props.post?.authorId) return false;
@@ -206,6 +236,7 @@ const blockReason = ref('');
 const availableSubtopics = ref([]);
 const selectedExceptions = ref([]);
 const blocking = ref(false);
+const showRefsModal = ref(false);
 
 const handleBlockClick = async () => {
   if (props.isBlocked) {
@@ -331,12 +362,12 @@ const confirmBlock = async () => {
   background: rgba(0, 0, 0, 0.05);
 }
 
-.stat.clickable {
+.stat.clickable, .referenced-meta.clickable {
   cursor: pointer;
   transition: transform 0.1s ease;
 }
 
-.stat.clickable:active {
+.stat.clickable:active, .referenced-meta.clickable:active {
   transform: scale(0.9);
 }
 
@@ -611,5 +642,29 @@ pre {
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
+}
+
+.referenced-post-item {
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background: #f8fafc;
+}
+
+.ref-post-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.ref-post-date {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.ref-post-content {
+  font-size: 0.95rem;
+  color: var(--text-color);
+  white-space: pre-wrap;
 }
 </style>

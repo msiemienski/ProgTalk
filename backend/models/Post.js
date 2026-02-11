@@ -108,6 +108,11 @@ postSchema.statics.getPaginated = async function (topicId, page = 1, limit = 20,
         this.find(query)
             .populate('authorId', 'email profile')
             .populate('tags', 'name slug color')
+            .populate({
+                path: 'referencedPosts',
+                select: 'content authorId createdAt',
+                populate: { path: 'authorId', select: 'email profile' }
+            })
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit),

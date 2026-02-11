@@ -61,6 +61,11 @@ class PostService {
         const populatedPost = await post.populate([
             { path: 'authorId', select: 'email profile' },
             { path: 'tags', select: 'name slug color' },
+            {
+                path: 'referencedPosts',
+                select: 'content authorId createdAt',
+                populate: { path: 'authorId', select: 'email profile' }
+            },
         ]);
 
         // Emit socket event
@@ -114,6 +119,11 @@ class PostService {
         return await post.populate([
             { path: 'authorId', select: 'email profile' },
             { path: 'tags', select: 'name slug color' },
+            {
+                path: 'referencedPosts',
+                select: 'content authorId createdAt',
+                populate: { path: 'authorId', select: 'email profile' }
+            },
         ]);
     }
 
