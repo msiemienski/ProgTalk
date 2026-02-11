@@ -10,11 +10,17 @@ export default defineConfig({
     server: {
         host: '0.0.0.0',
         port: 5173,
-        https: {
-            // When running inside the frontend container, certs are mounted to /app/certs
-            key: fs.readFileSync(path.resolve(__dirname, './certs/server.key')),
-            cert: fs.readFileSync(path.resolve(__dirname, './certs/server.cert')),
-        },
+        https: (() => {
+            try {
+                return {
+                    key: fs.readFileSync(path.resolve(__dirname, '../certs/server.key')),
+                    cert: fs.readFileSync(path.resolve(__dirname, '../certs/server.cert')),
+                };
+            } catch (e) {
+                console.warn('⚠️  Frontend SSL certificates not found, falling back to HTTP for dev server');
+                return false;
+            }
+        })(),
         proxy: {
             '/api': {
                 // Proxy to the backend service on the Docker network

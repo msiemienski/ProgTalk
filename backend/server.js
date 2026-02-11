@@ -2,6 +2,8 @@ import express from 'express';
 import https from 'https';
 import http from 'http';
 import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { Server } from 'socket.io';
 import dotenv from 'dotenv';
 import cors from 'cors';
@@ -15,9 +17,13 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // Middleware
 app.use(helmet({
     contentSecurityPolicy: false, // Disable for development
+    hsts: process.env.NODE_ENV !== 'development', // Disable HSTS in development for self-signed certs
 }));
 
 // Allow both localhost with https and http during development when needed.
@@ -26,8 +32,13 @@ app.use(cors({
     origin: (origin, callback) => {
         // allow requests with no origin (like mobile apps or curl)
         if (!origin) return callback(null, true);
-        // allow configured origin or localhost variations
-        const allowedOrigins = [allowedOrigin, 'http://localhost:5173', 'https://localhost:5173'];
+
+        // Relaxed CORS for local network development/testing
+        if (process.env.NODE_ENV === 'development') {
+            return callback(null, true);
+        }
+
+        const allowedOrigins = [allowedOrigin, 'http://localhost:5173', 'https://localhost:5173', 'http://localhost:3000', 'https://localhost:3000'];
         if (allowedOrigins.includes(origin)) return callback(null, true);
         return callback(new Error('Not allowed by CORS'));
     },
@@ -56,16 +67,12 @@ app.use('/api/posts', postsRouter);
 app.use('/api/tags', tagsRouter);
 app.use('/api/admin', adminRouter);
 
-// Root endpoint
-app.get('/', (req, res) => {
-    res.json({
-        message: 'ProgTalk API Server',
-        version: '1.0.0',
-        endpoints: {
-            health: '/api/health',
-        },
-    });
-});
+// Serve Static Files from Frontend Build
+const publicPath = path.join(__dirname, 'public');
+if (fs.existsSync(publicPath)) {
+    app.use(express.static(publicPath));
+    console.log(`📂 Serving static files from: ${publicPath}`);
+}
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -76,12 +83,26 @@ app.use((err, req, res, next) => {
     });
 });
 
-// 404 handler
+// 404 handler / SPA routing fallback
 app.use((req, res) => {
-    res.status(404).json({
-        error: 'Not Found',
-        message: `Cannot ${req.method} ${req.path}`,
-    });
+    // If it's an API request, return 404
+    if (req.path.startsWith('/api')) {
+        return res.status(404).json({
+            error: 'Not Found',
+            message: `Cannot ${req.method} ${req.path}`,
+        });
+    }
+
+    // Otherwise, serve index.html for SPA (Vue Router)
+    const indexFile = path.join(__dirname, 'public', 'index.html');
+    if (fs.existsSync(indexFile)) {
+        res.sendFile(indexFile);
+    } else {
+        res.status(404).json({
+            error: 'Not Found',
+            message: 'Frontend build not found',
+        });
+    }
 });
 
 // Create HTTPS server or HTTP fallback
@@ -175,7 +196,7 @@ io.on('connection', (socket) => {
 
 // Connect to MongoDB and start server
 connectDB().then(() => {
-    server.listen(PORT, () => {
+    server.listen(PORT, '0.0.0.0', () => {
         console.log('');
         console.log('🚀 ProgTalk Backend Server Started');
         console.log('=====================================');
