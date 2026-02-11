@@ -76,13 +76,22 @@
                   {{ block.exceptions.length }} wyjątków
                 </span>
               </div>
-              <button 
-                class="btn-icon danger" 
-                @click="handleQuickBlock(block.userId)"
-                title="Odblokuj"
-              >
-                &times;
-              </button>
+              <div class="block-actions">
+                <button 
+                  class="btn-icon secondary" 
+                  @click="editBlock(block)"
+                  title="Edytuj blokadę"
+                >
+                  ✎
+                </button>
+                <button 
+                  class="btn-icon danger" 
+                  @click="handleQuickBlock(block.userId)"
+                  title="Odblokuj"
+                >
+                  &times;
+                </button>
+              </div>
             </div>
             <div v-if="blockedUsers.length === 0" class="empty-state mini">Brak blokad.</div>
           </div>
@@ -114,7 +123,9 @@
               </div>
               
               <div class="mini-actions">
-                <button type="submit" class="btn primary btn-sm" :disabled="blocking">Zablokuj</button>
+                <button type="submit" class="btn primary btn-sm" :disabled="blocking">
+                  {{ isEditingBlock ? 'Zapisz' : 'Zablokuj' }}
+                </button>
                 <button type="button" class="btn text btn-sm" @click="closeBlockForm">Anuluj</button>
               </div>
             </form>
@@ -365,6 +376,7 @@ const blockForm = reactive({
 const userAccess = ref(null);
 const blockedUsers = ref([]);
 const bufferedPosts = ref([]);
+const isEditingBlock = ref(false);
 const activeViewers = ref(1);
 const typingUsers = ref(new Map());
 const referencedPostIds = ref([]);
@@ -414,6 +426,25 @@ const closeBlockForm = () => {
   blockForm.reason = '';
   blockForm.selectedExceptions = [];
   availableSubtopics.value = [];
+  isEditingBlock.value = false;
+};
+
+const editBlock = async (block) => {
+  isEditingBlock.value = true;
+  blockForm.email = block.userId?.email || '';
+  blockForm.reason = block.reason || '';
+  blockForm.selectedExceptions = block.exceptions ? block.exceptions.map(e => e._id || e) : [];
+  
+  showBlockForm.value = true;
+  
+  // Fetch subtopics for exceptions selection
+  try {
+    const res = await api.get(`/topics/${topicId.value}/subtopics?includeDescendants=true`);
+    availableSubtopics.value = res.data;
+  } catch (err) {
+    console.error('Failed to fetch subtopics:', err);
+    availableSubtopics.value = [];
+  }
 };
 
 const blockUser = async () => {
@@ -640,6 +671,29 @@ const changePage = (newPage) => {
   window.scrollTo({ top: 300, behavior: 'smooth' });
 };
 
+const removeModerator = async (targetUserId) => {
+  const mod = moderators.value.find(m => m.userId === targetUserId);
+  const name = mod ? mod.name || mod.email : 'tego użytkownika';
+
+  const confirmed = await confirmModal.value.open({
+    title: 'Odbierz uprawnienia',
+    message: `Czy na pewno chcesz odebrać uprawnienia moderacji dla ${name}?`,
+    dangerMode: true,
+    confirmText: 'Odbierz'
+  });
+  
+  if (!confirmed) return;
+
+  try {
+    await api.delete(`/topics/${topicId.value}/moderators/${targetUserId}`);
+    toastService.success(`Uprawnienia odebrane.`);
+    const modRes = await api.get(`/topics/${topicId.value}/moderators`);
+    moderators.value = modRes.data;
+  } catch (err) {
+    toastService.error(err.response?.data?.message || 'Błąd odbierania uprawnień');
+  }
+};
+
 const showBufferedPosts = () => {
   posts.value = [...bufferedPosts.value, ...posts.value];
   bufferedPosts.value = [];
@@ -849,7 +903,6 @@ onMounted(() => {
   socket.on('topic:updated', (data) => {
      if (data.action === 'subtopic_created') {
          fetchTopicData(topicId.value);
-         toastService.info('Dodano nowy podtemat');
      }
   });
 });

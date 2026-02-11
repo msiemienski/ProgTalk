@@ -1,5 +1,4 @@
 import Topic from '../models/Topic.js';
-import TopicModerator from '../models/TopicModerator.js';
 import mongoose from 'mongoose';
 
 class TopicService {
@@ -8,6 +7,7 @@ class TopicService {
      */
     async createTopic(name, description, parentId, creatorId) {
         // Check if parent exists (if parentId provided)
+        const TopicModerator = mongoose.model('TopicModerator');
         if (parentId) {
             const parent = await Topic.findById(parentId);
             if (!parent) {
@@ -148,6 +148,7 @@ class TopicService {
         // Check if user can moderate or is admin
         const User = mongoose.model('User');
         const user = await User.findById(userId);
+        const TopicModerator = mongoose.model('TopicModerator');
         const canModerate = await TopicModerator.canModerate(userId, topicId);
 
         if (!canModerate && user.role !== 'admin') {
@@ -218,6 +219,7 @@ class TopicService {
 
         const User = mongoose.model('User');
         const user = await User.findById(userId);
+        const TopicModerator = mongoose.model('TopicModerator');
         const canModerate = await TopicModerator.canModerate(userId, topicId);
         if (!canModerate && user.role !== 'admin') {
             throw new Error('User is not a moderator of this topic');
@@ -267,6 +269,7 @@ class TopicService {
         await Post.deleteMany({ topicId });
 
         // Delete moderators
+        const TopicModerator = mongoose.model('TopicModerator');
         await TopicModerator.deleteMany({ topicId });
 
         // Delete blocks
@@ -311,6 +314,7 @@ class TopicService {
         // Check permission
         const User = mongoose.model('User');
         const assignedBy = await User.findById(assignedByUserId);
+        const TopicModerator = mongoose.model('TopicModerator');
         const canModerate = await TopicModerator.canModerate(assignedByUserId, topicId);
 
         if (!canModerate && assignedBy.role !== 'admin') {
@@ -354,9 +358,10 @@ class TopicService {
 
         const User = mongoose.model('User');
         const requestor = await User.findById(requestingUserId);
+        const TopicModerator = mongoose.model('TopicModerator');
 
         // Cannot remove main moderator (creator)
-        if (topic.mainModeratorId.toString() === targetUserId) {
+        if (topic.mainModeratorId.toString() === targetUserId.toString()) {
             throw new Error('Cannot remove the main moderator (creator) of the topic');
         }
 
@@ -366,7 +371,7 @@ class TopicService {
             // Admin can proceed
         }
         // Main moderator of THIS topic can remove anyone
-        else if (topic.mainModeratorId.toString() === requestingUserId) {
+        else if (topic.mainModeratorId.toString() === requestingUserId.toString()) {
             // Main mod can proceed
         }
         // Otherwise, check hierarchy levels
@@ -418,6 +423,7 @@ class TopicService {
      */
     async getModerators(topicId) {
         try {
+            const TopicModerator = mongoose.model('TopicModerator');
             const moderators = await TopicModerator.getTopicModerators(topicId, true);
 
             const mapped = await Promise.all(moderators.map(async mod => {
@@ -521,6 +527,7 @@ class TopicService {
         if (!topic) throw new Error('Topic not found');
 
         // Check permission: Requestor must be moderator of this topic or admin
+        const TopicModerator = mongoose.model('TopicModerator');
         const canModerate = await TopicModerator.canModerate(blockedByUserId, topicId);
         const requestor = await User.findById(blockedByUserId);
         if (!canModerate && requestor.role !== 'admin') {
@@ -536,7 +543,6 @@ class TopicService {
         }
 
         // 1. Handle Moderator Consequences
-        const TopicModerator = (await import('../models/TopicModerator.js')).default;
         const isMod = await TopicModerator.findOne({ topicId, userId: targetUser._id });
 
         if (isMod) {
@@ -614,6 +620,7 @@ class TopicService {
         const User = mongoose.model('User');
 
         // Check permission
+        const TopicModerator = mongoose.model('TopicModerator');
         const canModerate = await TopicModerator.canModerate(requestingUserId, topicId);
         const requestor = await User.findById(requestingUserId);
 
@@ -636,6 +643,7 @@ class TopicService {
         const User = mongoose.model('User');
 
         // Check permission
+        const TopicModerator = mongoose.model('TopicModerator');
         const canModerate = await TopicModerator.canModerate(requestingUserId, topicId);
         const requestor = await User.findById(requestingUserId);
 

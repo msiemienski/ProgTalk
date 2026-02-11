@@ -66,16 +66,16 @@ topicBlockSchema.statics.isUserBlocked = async function (userId, topicId) {
     }
 
     // Check if current topic or any ancestor is in exceptions
-    // If the current topic is explicitly listed as an exception in any block, user has access
+    // If the current topic OR any of its ancestors is explicitly listed as an exception in any block, user has access
     for (const block of blocks) {
         if (block.exceptions && block.exceptions.length > 0) {
-            // Check if current topic is in exceptions
+            // Check if current topic or any ancestor is in exceptions
             const hasException = block.exceptions.some(exceptionId =>
-                exceptionId.equals(topicId)
+                topicsToCheck.some(topicIdToCheck => topicIdToCheck.equals(exceptionId))
             );
 
             if (hasException) {
-                // This topic is an exception - user is NOT blocked here
+                // This topic (or one of its ancestors) is an exception - user is NOT blocked here
                 return false;
             }
         }

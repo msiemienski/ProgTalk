@@ -131,7 +131,7 @@
         <div class="modal-footer">
           <button class="btn secondary" @click="closeBlockModal">Anuluj</button>
           <button class="btn danger" @click="confirmBlock" :disabled="blocking">
-            {{ blocking ? 'Blokowanie...' : 'Zablokuj' }}
+            {{ isBlocked ? 'Zapisz' : 'Zablokuj' }}
           </button>
         </div>
       </div>
