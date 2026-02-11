@@ -169,6 +169,10 @@
               <span class="dot">•</span>
               <span v-if="topic.mainModeratorId">Moderator: {{ topic.mainModeratorId.profile?.name || topic.mainModeratorId.email }}</span>
               <span class="dot">•</span>
+              <span class="presence-indicator" :title="'Aktualnie przeglądających: ' + activeViewers">
+                👥 {{ activeViewers }} online
+              </span>
+              <span class="dot">•</span>
               <span :style="{ color: socketStatus.connected ? '#10b981' : '#ef4444' }">
                 {{ socketStatus.connected ? '● Live' : '○ Offline' }}
               </span>
@@ -228,6 +232,13 @@
               />
             </transition>
             
+            <!-- Typing Indicators -->
+            <transition name="fade">
+              <div v-if="typingDisplay" class="typing-indicator">
+                {{ typingDisplay }}
+              </div>
+            </transition>
+
             <!-- New Posts Buffer Pill -->
             <transition name="fade">
               <div v-if="bufferedPosts.length > 0" class="new-posts-pill-container">
@@ -351,6 +362,16 @@ const blockForm = reactive({
 const userAccess = ref(null);
 const blockedUsers = ref([]);
 const bufferedPosts = ref([]);
+const activeViewers = ref(1);
+const typingUsers = ref(new Map());
+
+const typingDisplay = computed(() => {
+  const users = Array.from(typingUsers.value.values());
+  if (users.length === 0) return '';
+  if (users.length === 1) return `${users[0]} pisze...`;
+  if (users.length === 2) return `${users[0]} i ${users[1]} piszą...`;
+  return `${users[0]}, ${users[1]} i ${users.length - 2} innych pisze...`;
+});
 
 const isModerator = computed(() => {
   if (authService.isAdmin.value) return true;
@@ -774,6 +795,30 @@ onMounted(() => {
     }
   });
 
+  socket.on('post:liked', ({ postId, likeCount }) => {
+    const post = posts.value.find(p => p._id === postId);
+    if (post) {
+      post.likeCount = likeCount;
+    }
+  });
+
+  socket.on('post:deleted', ({ postId }) => {
+    posts.value = posts.value.filter(p => p._id !== postId);
+    bufferedPosts.value = bufferedPosts.value.filter(p => p._id !== postId);
+  });
+
+  socket.on('presence:updated', ({ count }) => {
+    activeViewers.value = count;
+  });
+
+  socket.on('typing:updated', ({ userName, isTyping }) => {
+    if (isTyping) {
+      typingUsers.value.set(userName, userName);
+    } else {
+      typingUsers.value.delete(userName);
+    }
+  });
+
   socket.on('topic:updated', (data) => {
      if (data.action === 'subtopic_created') {
          fetchTopicData(topicId.value);
@@ -787,6 +832,10 @@ onUnmounted(() => {
     socket.leaveTopic(topicId.value);
   }
   socket.off('post:created');
+  socket.off('post:liked');
+  socket.off('post:deleted');
+  socket.off('presence:updated');
+  socket.off('typing:updated');
   socket.off('topic:updated');
 });
 
@@ -893,6 +942,19 @@ watch(
 
 .new-posts-pill:active {
   transform: translateY(0);
+}
+
+.typing-indicator {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-bottom: 0.5rem;
+  padding-left: 0.5rem;
+}
+
+.presence-indicator {
+  color: var(--primary-color);
+  font-weight: 500;
 }
 
 .content {

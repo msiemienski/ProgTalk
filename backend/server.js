@@ -122,11 +122,20 @@ SocketService.init(io);
 io.on('connection', (socket) => {
     console.log('🔌 Client connected:', socket.id);
 
+    // Function to broadcast presence in a room
+    const broadcastPresence = (roomName) => {
+        const room = io.sockets.adapter.rooms.get(roomName);
+        const count = room ? room.size : 0;
+        io.to(roomName).emit('presence:updated', { count });
+    };
+
     socket.on('join_topic', (topicId, callback) => {
         const roomName = `topic_${topicId}`;
         socket.join(roomName);
-        const rooms = Array.from(socket.rooms);
-        console.log(`👤 Client ${socket.id} joined ${roomName}. Rooms:`, rooms);
+        console.log(`👤 Client ${socket.id} joined ${roomName}`);
+
+        broadcastPresence(roomName);
+
         if (typeof callback === 'function') {
             callback({ status: 'ok', room: roomName });
         }
@@ -136,6 +145,27 @@ io.on('connection', (socket) => {
         const roomName = `topic_${topicId}`;
         socket.leave(roomName);
         console.log(`👋 Client ${socket.id} left ${roomName}`);
+        broadcastPresence(roomName);
+    });
+
+    socket.on('typing_start', ({ topicId, userName }) => {
+        const roomName = `topic_${topicId}`;
+        socket.to(roomName).emit('typing:updated', { topicId, userName, isTyping: true });
+    });
+
+    socket.on('typing_stop', ({ topicId, userName }) => {
+        const roomName = `topic_${topicId}`;
+        socket.to(roomName).emit('typing:updated', { topicId, userName, isTyping: false });
+    });
+
+    socket.on('disconnecting', () => {
+        // Broadcast presence update to all rooms the user was in
+        for (const room of socket.rooms) {
+            if (room.startsWith('topic_')) {
+                // We need to wait a tick for the socket to actually leave
+                setTimeout(() => broadcastPresence(room), 0);
+            }
+        }
     });
 
     socket.on('disconnect', () => {

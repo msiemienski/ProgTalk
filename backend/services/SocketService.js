@@ -39,6 +39,16 @@ class SocketService {
         });
         console.log(`📡 Emitted user registration: ${userData.email}`);
     }
+
+    emitPostLiked(topicId, postId, likeCount) {
+        if (!this.io) return;
+        this.io.to(`topic_${topicId}`).emit('post:liked', { postId, likeCount });
+    }
+
+    emitPostDeleted(topicId, postId) {
+        if (!this.io) return;
+        this.io.to(`topic_${topicId}`).emit('post:deleted', { postId });
+    }
 }
 
 export default new SocketService();

@@ -53,8 +53,10 @@
 </template>
 
 <script setup>
-import { reactive, ref, onMounted } from 'vue';
+import { reactive, ref, onMounted, watch } from 'vue';
 import api from '../services/api';
+import socket from '../services/socket';
+import authService from '../services/authService';
 
 const props = defineProps({
   topicId: {
@@ -86,7 +88,27 @@ onMounted(async () => {
   }
 });
 
+let typingTimer = null;
+const isTyping = ref(false);
 
+watch(() => form.content, (newVal) => {
+  if (!authService.isAuthenticated.value || !authService.user.value) return;
+  if (!newVal.trim()) return;
+
+  const userName = authService.user.value.profile?.name || authService.user.value.email.split('@')[0];
+
+  if (!isTyping.value) {
+    isTyping.value = true;
+    socket.emit('typing_start', { topicId: props.topicId, userName });
+  }
+
+  if (typingTimer) clearTimeout(typingTimer);
+  
+  typingTimer = setTimeout(() => {
+    isTyping.value = false;
+    socket.emit('typing_stop', { topicId: props.topicId, userName });
+  }, 3000);
+});
 
 const handleSubmit = async () => {
   if (!form.content.trim()) return;

@@ -232,7 +232,13 @@ class PostService {
             throw new Error('You are blocked from interacting with this topic');
         }
 
-        return await PostLike.toggleLike(postId, userId);
+        const { liked, likeCount } = await PostLike.toggleLike(postId, userId);
+
+        // Emit update via socket
+        const SocketService = (await import('./SocketService.js')).default;
+        SocketService.emitPostLiked(post.topicId, postId, likeCount);
+
+        return { liked, likeCount };
     }
 
     /**
