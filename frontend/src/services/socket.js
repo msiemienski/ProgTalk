@@ -16,14 +16,10 @@ class SocketClient {
         // Optional explicit override for socket endpoint (can be absolute origin or relative)
         this.socketOverride = import.meta.env.VITE_SOCKET_URL || null;
 
-        // Determine socket base URL:
-        // - If API URL is relative (starts with '/'), we assume the dev server proxy is used and
-        //   will forward '/socket.io' -> backend (so connect to current origin).
-        // - If API URL is absolute (https://host:port), connect to that origin.
         if (this.socketOverride) {
             this.socketBaseUrl = this.socketOverride.startsWith('/') ? undefined : this.socketOverride;
         } else if (this.apiUrl.startsWith('/')) {
-            this.socketBaseUrl = undefined; // connect to same origin; Vite proxy will forward '/socket.io'
+            this.socketBaseUrl = undefined;
         } else {
             try {
                 const parsed = new URL(this.apiUrl);
