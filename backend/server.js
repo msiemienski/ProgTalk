@@ -110,8 +110,8 @@ let server;
 try {
     // Try to load SSL certificates
     // Inside Docker certs are typically mounted to /app/certs
-    const sslKeyPath = process.env.SSL_KEY_PATH || '/app/certs/server.key';
-    const sslCertPath = process.env.SSL_CERT_PATH || '/app/certs/server.cert';
+    const sslKeyPath = (process.env.SSL_KEY_PATH || '/app/certs/server.key').trim();
+    const sslCertPath = (process.env.SSL_CERT_PATH || '/app/certs/server.cert').trim();
     const sslKey = fs.readFileSync(sslKeyPath);
     const sslCert = fs.readFileSync(sslCertPath);
 
@@ -123,6 +123,7 @@ try {
     console.log('🔒 HTTPS server configured');
 } catch (error) {
     console.warn('⚠️  SSL certificates not found, falling back to HTTP');
+    console.error(`   Error details: ${error.message}`);
     console.warn('   Run certificate generation script to enable HTTPS');
     server = http.createServer(app);
 }

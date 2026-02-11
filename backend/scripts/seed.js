@@ -38,7 +38,7 @@ const seedDatabase = async () => {
 
         console.log('🌱 Starting seeding process...');
 
-        // 1. Create Users (User model hashes passwords in pre-save hook)
+        // 1. Create Users
         const adminPassword = 'admin123';
         const userPassword = 'user123';
 
@@ -61,29 +61,49 @@ const seedDatabase = async () => {
             approvedBy: admin._id,
         });
 
-        const user1 = await User.create({
-            email: 'john@example.com',
+        // Batch create regular users
+        const userData = [
+            { email: 'john@example.com', name: 'John Coder', bio: 'Just here for the JS tips.' },
+            { email: 'dev_jane@example.com', name: 'Jane Dev', bio: 'Fullstack enthusiast.' },
+            { email: 'bob@example.com', name: 'Bob Builder', bio: 'I like infrastructure.' },
+            { email: 'alice@example.com', name: 'Alice in DevLand', bio: 'Curious about everything.' },
+            { email: 'charlie@example.com', name: 'Charlie Bitme', bio: 'Backend wizard.' },
+            { email: 'stella@example.com', name: 'Stella Artois', bio: 'Quality Assurance is my passion.' },
+        ];
+
+        const users = [];
+        for (const data of userData) {
+            users.push(await User.create({
+                email: data.email,
+                password: userPassword,
+                role: 'user',
+                status: 'active',
+                profile: { name: data.name, bio: data.bio },
+                approvedAt: new Date(),
+                approvedBy: admin._id,
+            }));
+        }
+
+        // Add some pending users for admin testing
+        await User.create({
+            email: 'newbie@example.com',
             password: userPassword,
             role: 'user',
-            status: 'active',
-            profile: { name: 'John Coder', bio: 'Just here for the JS tips.' },
-            approvedAt: new Date(),
-            approvedBy: admin._id,
+            status: 'pending',
+            profile: { name: 'Newbie Noah', bio: 'Please let me in!' },
         });
 
-        const user2 = await User.create({
-            email: 'dev_jane@example.com',
+        await User.create({
+            email: 'mystery@test.com',
             password: userPassword,
             role: 'user',
-            status: 'active',
-            profile: { name: 'Jane Dev', bio: 'Fullstack enthusiast.' },
-            approvedAt: new Date(),
-            approvedBy: admin._id,
+            status: 'pending',
+            profile: { name: 'Mystery Guest' },
         });
 
-        console.log('✅ Users created.');
+        console.log('✅ Users created (including pending).');
 
-        // 2. Create Tags (using a loop/create to trigger pre-save slug generation)
+        // 2. Create Tags
         const tagData = [
             { name: 'JavaScript', category: 'language', color: '#f7df1e', createdBy: admin._id },
             { name: 'TypeScript', category: 'language', color: '#3178c6', createdBy: admin._id },
@@ -94,6 +114,9 @@ const seedDatabase = async () => {
             { name: 'Docker', category: 'tool', color: '#2496ed', createdBy: admin._id },
             { name: 'CSS', category: 'concept', color: '#1572b6', createdBy: admin._id },
             { name: 'Architecture', category: 'concept', color: '#ff4d4d', createdBy: admin._id },
+            { name: 'Python', category: 'language', color: '#3776ab', createdBy: admin._id },
+            { name: 'Go', category: 'language', color: '#00add8', createdBy: admin._id },
+            { name: 'Kubernetes', category: 'tool', color: '#326ce5', createdBy: admin._id },
         ];
 
         const tags = [];
@@ -125,71 +148,123 @@ const seedDatabase = async () => {
         console.log('✅ Root topics created.');
 
         // 4. Create Subtopics
-        const jsTopic = await Topic.create({
-            name: 'JavaScript',
-            description: 'All about JS, from ES6 to the latest runtimes.',
-            parentId: programming._id,
-            mainModeratorId: mod._id,
-        });
-        // Note: TopicService handles moderator creation in app, here we do it manually for seed
-        await TopicModerator.create({ topicId: jsTopic._id, userId: mod._id, assignedBy: admin._id, isMain: true });
-        await Topic.findByIdAndUpdate(programming._id, { $inc: { subtopicCount: 1 } });
+        const subtopicData = [
+            { name: 'JavaScript', description: 'All about JS.', parent: programming, mod: mod },
+            { name: 'Python', description: 'Snake language.', parent: programming, mod: users[2] },
+            { name: 'Vue.js', description: 'Progressive framework.', parent: webDev, mod: users[1] },
+            { name: 'React', description: 'Library for UI.', parent: webDev, mod: users[3] },
+            { name: 'Backend', description: 'Server-side stuff.', parent: webDev, mod: users[4] },
+            { name: 'Docker', description: 'Containerization.', parent: devOps, mod: admin },
+            { name: 'Kubernetes', description: 'Orchestration.', parent: devOps, mod: admin },
+        ];
 
-        const vueTopic = await Topic.create({
-            name: 'Vue.js',
-            description: 'The progressive framework discussions.',
-            parentId: webDev._id,
-            mainModeratorId: user2._id,
-        });
-        await TopicModerator.create({ topicId: vueTopic._id, userId: user2._id, assignedBy: admin._id, isMain: true });
-        await Topic.findByIdAndUpdate(webDev._id, { $inc: { subtopicCount: 1 } });
-
-        const dockerTopic = await Topic.create({
-            name: 'Docker',
-            description: 'Containerization and orchestration.',
-            parentId: devOps._id,
-            mainModeratorId: admin._id,
-        });
-        await TopicModerator.create({ topicId: dockerTopic._id, userId: admin._id, assignedBy: admin._id, isMain: true });
-        await Topic.findByIdAndUpdate(devOps._id, { $inc: { subtopicCount: 1 } });
+        const subtopics = [];
+        for (const data of subtopicData) {
+            const topic = await Topic.create({
+                name: data.name,
+                description: data.description,
+                parentId: data.parent._id,
+                mainModeratorId: data.mod._id,
+            });
+            await TopicModerator.create({ topicId: topic._id, userId: data.mod._id, assignedBy: admin._id, isMain: true });
+            await Topic.findByIdAndUpdate(data.parent._id, { $inc: { subtopicCount: 1 } });
+            subtopics.push(topic);
+        }
 
         console.log('✅ Subtopics created.');
 
         // 5. Create Posts
-        const post1 = await Post.create({
-            topicId: jsTopic._id,
-            authorId: user1._id,
-            content: 'How do you handle `async/await` in large loops? Here is a sequential approach using a `for...of` loop:\n\n```javascript\nconst process = async (items) => {\n  for (const item of items) {\n    await doWork(item);\n  }\n};\n```\n\nIs there a better way to do this in parallel?',
-            tags: [tags[0]._id, tags[4]._id]
+        const postData = [
+            {
+                topic: subtopics[0], // JS
+                author: users[0],
+                content: 'How do you handle `async/await` in large loops? Here is a sequential approach:\n\n```javascript\nfor (const item of items) { await work(item); }\n```',
+                tags: [tags[0]._id, tags[4]._id]
+            },
+            {
+                topic: subtopics[2], // Vue
+                author: users[1],
+                content: 'Vue 3 Composables are much better than Mixins. They offer better type safety and logic reuse.',
+                tags: [tags[2]._id, tags[1]._id]
+            },
+            {
+                topic: subtopics[5], // Docker
+                author: admin,
+                content: 'Use multi-stage builds to keep your Docker images small. Here is an example:\n\n```dockerfile\nFROM node:18-alpine AS build\nWORKDIR /app\nCOPY . .\nRUN npm run build\n\nFROM nginx:alpine\nCOPY --from=build /app/dist /usr/share/nginx/html\n```',
+                tags: [tags[6]._id]
+            },
+            {
+                topic: subtopics[4], // Backend
+                author: users[4],
+                content: 'Choosing between SQL and NoSQL for a new project. Thoughts on MongoDB for a social media app?',
+                tags: [tags[5]._id]
+            },
+            {
+                topic: subtopics[0], // JS
+                author: admin,
+                content: 'Regarding the loop question: if you need performance, use `Promise.all`!',
+                tags: [tags[0]._id]
+            },
+            {
+                topic: subtopics[3], // React
+                author: users[3],
+                content: 'React Server Components seem complex but powerful. Anyone tried them in production?',
+                tags: [tags[3]._id]
+            }
+        ];
+
+        const posts = [];
+        for (const data of postData) {
+            posts.push(await Post.create({
+                topicId: data.topic._id,
+                authorId: data.author._id,
+                content: data.content,
+                tags: data.tags || []
+            }));
+        }
+
+        // Add bulk posts to showcase pagination in the JavaScript topic
+        console.log('📝 Generating bulk posts for pagination demo...');
+        for (let i = 1; i <= 15; i++) {
+            const randomAuthor = users[i % users.length];
+            await Post.create({
+                topicId: subtopics[0]._id, // JavaScript
+                authorId: randomAuthor._id,
+                content: `Post nr ${i}: Kontynuujemy dyskusję o przyszłości web developmentu. Sprawdźcie przydatne materiały tutaj: [Dokumentacja MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript).`,
+                tags: [tags[0]._id]
+            });
+        }
+
+        console.log('✅ Posts created (including bulk for pagination).');
+
+        // 6. Create interactions
+        // Add some random likes
+        for (let i = 0; i < posts.length; i++) {
+            const likeCount = Math.floor(Math.random() * 5);
+            for (let j = 0; j < likeCount; j++) {
+                const randomUser = users[Math.floor(Math.random() * users.length)];
+                try {
+                    await PostLike.create({ postId: posts[i]._id, userId: randomUser._id });
+                } catch (e) { /* ignore duplicate likes */ }
+            }
+            await Post.findByIdAndUpdate(posts[i]._id, { likeCount });
+        }
+
+        // Add a block to show functionality
+        await TopicBlock.create({
+            topicId: programming._id,
+            userId: users[5]._id, // Stella
+            blockedBy: admin._id,
+            reason: 'Too many QA questions!',
+            exceptions: [subtopics[0]._id] // Still allowed in JS
         });
 
-        const post2 = await Post.create({
-            topicId: vueTopic._id,
-            authorId: user2._id,
-            content: 'Vue 3 with `<script setup>` is a game changer for developer experience. The boilerplate reduction is amazing compared to the Options API.',
-            tags: [tags[2]._id]
-        });
+        console.log('✅ Interactions and blocks created.');
 
-        const post3 = await Post.create({
-            topicId: jsTopic._id,
-            authorId: admin._id,
-            content: 'Great question John! Just a reminder that for performance, you might want to look into `Promise.all` if your items are independent:\n\n```javascript\nawait Promise.all(items.map(item => doWork(item)));\n```',
-            referencedPosts: [post1._id]
-        });
-
-        console.log('✅ Posts created.');
-
-        // 6. Create some interactions
-        await PostLike.create({ postId: post1._id, userId: admin._id });
-        await PostLike.create({ postId: post1._id, userId: user2._id });
-        await Post.findByIdAndUpdate(post1._id, { $inc: { likeCount: 2 } });
-
-        console.log('✅ Interactions created.');
-
-        console.log('\n🚀 Database seeding completed successfully!');
+        console.log('\n🚀 Expanded database seeding completed successfully!');
         console.log('--- Credentials ---');
         console.log('Admin: admin@progtalk.com / admin123');
-        console.log('User:  john@example.com   / user123');
+        console.log('Users (all): user123');
         console.log('-------------------');
 
         process.exit(0);
