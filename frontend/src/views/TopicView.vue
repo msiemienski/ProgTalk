@@ -29,7 +29,7 @@
               <span class="mod-name" :title="mod.email">
                 {{ mod.name || mod.email.split('@')[0] }}
                 <span v-if="mod.isMain" class="badge mini primary">Main</span>
-                <span v-else-if="mod.type === 'inherited'" class="badge mini gray" title="Dziedziczony">Desk</span>
+                <span v-else-if="mod.type === 'inherited'" class="badge mini gray" title="Dziedziczony">Inherited</span>
               </span>
               <button 
                 v-if="canManageModerators && !mod.isMain" 
