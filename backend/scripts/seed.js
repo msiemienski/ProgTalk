@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import bcrypt from 'bcryptjs';
 import User from '../models/User.js';
 import Topic from '../models/Topic.js';
 import Post from '../models/Post.js';
@@ -61,7 +60,6 @@ const seedDatabase = async () => {
             approvedBy: admin._id,
         });
 
-        // Batch create regular users
         const userData = [
             { email: 'john@example.com', name: 'John Coder', bio: 'Just here for the JS tips.' },
             { email: 'dev_jane@example.com', name: 'Jane Dev', bio: 'Fullstack enthusiast.' },
@@ -71,9 +69,9 @@ const seedDatabase = async () => {
             { email: 'stella@example.com', name: 'Stella Artois', bio: 'Quality Assurance is my passion.' },
         ];
 
-        const users = [];
+        const users = {};
         for (const data of userData) {
-            users.push(await User.create({
+            const user = await User.create({
                 email: data.email,
                 password: userPassword,
                 role: 'user',
@@ -81,190 +79,149 @@ const seedDatabase = async () => {
                 profile: { name: data.name, bio: data.bio },
                 approvedAt: new Date(),
                 approvedBy: admin._id,
-            }));
+            });
+            users[data.email] = user;
         }
 
-        // Add some pending users for admin testing
-        await User.create({
-            email: 'newbie@example.com',
-            password: userPassword,
-            role: 'user',
-            status: 'pending',
-            profile: { name: 'Newbie Noah', bio: 'Please let me in!' },
-        });
-
-        await User.create({
-            email: 'mystery@test.com',
-            password: userPassword,
-            role: 'user',
-            status: 'pending',
-            profile: { name: 'Mystery Guest' },
-        });
-
-        console.log('✅ Users created (including pending).');
+        console.log('✅ Users created.');
 
         // 2. Create Tags
-        const tagData = [
-            { name: 'JavaScript', category: 'language', color: '#f7df1e', createdBy: admin._id },
-            { name: 'TypeScript', category: 'language', color: '#3178c6', createdBy: admin._id },
-            { name: 'Vue.js', category: 'framework', color: '#42b883', createdBy: admin._id },
-            { name: 'React', category: 'framework', color: '#61dafb', createdBy: admin._id },
-            { name: 'Node.js', category: 'platform', color: '#339933', createdBy: admin._id },
-            { name: 'MongoDB', category: 'tool', color: '#47a248', createdBy: admin._id },
-            { name: 'Docker', category: 'tool', color: '#2496ed', createdBy: admin._id },
-            { name: 'CSS', category: 'concept', color: '#1572b6', createdBy: admin._id },
-            { name: 'Architecture', category: 'concept', color: '#ff4d4d', createdBy: admin._id },
-            { name: 'Python', category: 'language', color: '#3776ab', createdBy: admin._id },
-            { name: 'Go', category: 'language', color: '#00add8', createdBy: admin._id },
-            { name: 'Kubernetes', category: 'tool', color: '#326ce5', createdBy: admin._id },
-        ];
-
         const tags = [];
-        for (const data of tagData) {
-            tags.push(await Tag.create(data));
+        const tagNames = ['JavaScript', 'TypeScript', 'Vue.js', 'React', 'Node.js', 'MongoDB', 'Docker', 'CSS', 'Architecture', 'Python', 'Go', 'Kubernetes', 'AWS', 'Azure'];
+        const colors = ['#f7df1e', '#3178c6', '#42b883', '#61dafb', '#339933', '#47a248', '#2496ed', '#1572b6', '#ff4d4d', '#3776ab', '#00add8', '#326ce5', '#FF9900', '#007FFF'];
+
+        for (let i = 0; i < tagNames.length; i++) {
+            tags.push(await Tag.create({
+                name: tagNames[i],
+                category: 'concept',
+                color: colors[i],
+                createdBy: admin._id
+            }));
         }
 
         console.log('✅ Tags created.');
 
-        // 3. Create Root Topics
-        const programming = await Topic.create({
-            name: 'Programming',
-            description: 'General discussions about programming languages and logic.',
-            mainModeratorId: admin._id,
-        });
-
-        const webDev = await Topic.create({
-            name: 'Web Development',
-            description: 'Building the web: frontend, backend, and everything in between.',
-            mainModeratorId: admin._id,
-        });
-
-        const devOps = await Topic.create({
-            name: 'DevOps & Tools',
-            description: 'Deployment, CI/CD, and developer productivity tools.',
-            mainModeratorId: admin._id,
-        });
-
-        console.log('✅ Root topics created.');
-
-        // 4. Create Subtopics
-        const subtopicData = [
-            { name: 'JavaScript', description: 'All about JS.', parent: programming, mod: mod },
-            { name: 'Python', description: 'Snake language.', parent: programming, mod: users[2] },
-            { name: 'Vue.js', description: 'Progressive framework.', parent: webDev, mod: users[1] },
-            { name: 'React', description: 'Library for UI.', parent: webDev, mod: users[3] },
-            { name: 'Backend', description: 'Server-side stuff.', parent: webDev, mod: users[4] },
-            { name: 'Docker', description: 'Containerization.', parent: devOps, mod: admin },
-            { name: 'Kubernetes', description: 'Orchestration.', parent: devOps, mod: admin },
-        ];
-
-        const subtopics = [];
-        for (const data of subtopicData) {
+        // 3. Create Topics hierarchy
+        const createTopic = async (name, description, parentId = null, mainMod = admin) => {
             const topic = await Topic.create({
-                name: data.name,
-                description: data.description,
-                parentId: data.parent._id,
-                mainModeratorId: data.mod._id,
+                name,
+                description,
+                parentId,
+                mainModeratorId: mainMod._id
             });
-            await TopicModerator.create({ topicId: topic._id, userId: data.mod._id, assignedBy: admin._id, isMain: true });
-            await Topic.findByIdAndUpdate(data.parent._id, { $inc: { subtopicCount: 1 } });
-            subtopics.push(topic);
-        }
 
-        console.log('✅ Subtopics created.');
+            // Increment parent's subtopic count
+            if (parentId) {
+                await Topic.findByIdAndUpdate(parentId, { $inc: { subtopicCount: 1 } });
+            }
+
+            // Create TopicModerator entry
+            await TopicModerator.create({
+                topicId: topic._id,
+                userId: mainMod._id,
+                assignedBy: admin._id,
+                isMain: true
+            });
+
+            return topic;
+        };
+
+        const addModerator = async (topicId, userId) => {
+            try {
+                await TopicModerator.create({
+                    topicId,
+                    userId,
+                    assignedBy: admin._id,
+                    isMain: false
+                });
+            } catch (e) { /* ignore duplicate */ }
+        };
+
+        // Programming subtree
+        const tProgramming = await createTopic('Programming', 'General discussions about coding.', null, admin);
+        await addModerator(tProgramming._id, mod._id);
+
+        const tJS = await createTopic('JavaScript', 'The language of the web.', tProgramming._id, users['john@example.com']);
+        const tVue = await createTopic('Vue.js', 'Progressive Framework.', tJS._id, users['john@example.com']);
+        const tNode = await createTopic('Node.js', 'Server-side runtime.', tJS._id, users['dev_jane@example.com']);
+
+        const tPython = await createTopic('Python', 'Snake language for AI and script.', tProgramming._id, users['charlie@example.com']);
+
+        // Web subtree
+        const tWeb = await createTopic('Web Development', 'Building apps.', null, admin);
+        await addModerator(tWeb._id, users['alice@example.com']);
+        const tFrontend = await createTopic('Frontend', 'Everything UI.', tWeb._id, users['alice@example.com']);
+        const tBackend = await createTopic('Backend', 'Servers and DBs.', tWeb._id, users['charlie@example.com']);
+
+        // DevOps subtree
+        const tDevOps = await createTopic('DevOps & Infrastructure', 'Tools and cloud.', null, admin);
+        const tDocker = await createTopic('Docker', 'Container mastery.', tDevOps._id, admin);
+        const tCloud = await createTopic('Cloud Services', 'The cloud giants.', tDevOps._id, users['bob@example.com']);
+        const tAWS = await createTopic('AWS', 'Amazon Web Services.', tCloud._id, users['bob@example.com']);
+        const tAzure = await createTopic('Azure', 'Microsoft Cloud.', tCloud._id, users['bob@example.com']);
+
+        console.log('✅ Topics hierarchy created.');
+
+        // 4. Create blocks with exceptions
+        // Stella (QA) is blocked in Programming but has access to JS (Inherited exception Node/Vue)
+        await TopicBlock.create({
+            topicId: tProgramming._id,
+            userId: users['stella@example.com']._id,
+            blockedBy: admin._id,
+            reason: 'Quality Assurance experts must focus on implementation details.',
+            exceptions: [tJS._id]
+        });
+
+        // Charlie is blocked in DevOps but has access to Cloud Services (Recursion test: Cloud -> AWS, Azure)
+        await TopicBlock.create({
+            topicId: tDevOps._id,
+            userId: users['charlie@example.com']._id,
+            blockedBy: admin._id,
+            reason: 'Charlie is banned from general DevOps discussions but cloud is okay.',
+            exceptions: [tCloud._id]
+        });
+
+        // Jane Dev is blocked in Web Development with NO exceptions
+        await TopicBlock.create({
+            topicId: tWeb._id,
+            userId: users['dev_jane@example.com']._id,
+            blockedBy: admin._id,
+            reason: 'Access denied for general Web Dev.',
+            exceptions: []
+        });
+
+        console.log('✅ Blocks with exceptions created.');
 
         // 5. Create Posts
-        const postData = [
-            {
-                topic: subtopics[0], // JS
-                author: users[0],
-                content: 'How do you handle `async/await` in large loops? Here is a sequential approach:\n\n```javascript\nfor (const item of items) { await work(item); }\n```',
-                tags: [tags[0]._id, tags[4]._id]
-            },
-            {
-                topic: subtopics[2], // Vue
-                author: users[1],
-                content: 'Vue 3 Composables are much better than Mixins. They offer better type safety and logic reuse.',
-                tags: [tags[2]._id, tags[1]._id]
-            },
-            {
-                topic: subtopics[5], // Docker
-                author: admin,
-                content: 'Use multi-stage builds to keep your Docker images small. Here is an example:\n\n```dockerfile\nFROM node:18-alpine AS build\nWORKDIR /app\nCOPY . .\nRUN npm run build\n\nFROM nginx:alpine\nCOPY --from=build /app/dist /usr/share/nginx/html\n```',
-                tags: [tags[6]._id]
-            },
-            {
-                topic: subtopics[4], // Backend
-                author: users[4],
-                content: 'Choosing between SQL and NoSQL for a new project. Thoughts on MongoDB for a social media app?',
-                tags: [tags[5]._id]
-            },
-            {
-                topic: subtopics[0], // JS
-                author: admin,
-                content: 'Regarding the loop question: if you need performance, use `Promise.all`!',
-                tags: [tags[0]._id]
-            },
-            {
-                topic: subtopics[3], // React
-                author: users[3],
-                content: 'React Server Components seem complex but powerful. Anyone tried them in production?',
-                tags: [tags[3]._id]
-            }
-        ];
-
-        const posts = [];
-        for (const data of postData) {
-            posts.push(await Post.create({
-                topicId: data.topic._id,
-                authorId: data.author._id,
-                content: data.content,
-                tags: data.tags || []
-            }));
-        }
-
-        // Add bulk posts to showcase pagination in the JavaScript topic
-        console.log('📝 Generating bulk posts for pagination demo...');
-        for (let i = 1; i <= 15; i++) {
-            const randomAuthor = users[i % users.length];
-            await Post.create({
-                topicId: subtopics[0]._id, // JavaScript
-                authorId: randomAuthor._id,
-                content: `Post nr ${i}: Kontynuujemy dyskusję o przyszłości web developmentu. Sprawdźcie przydatne materiały tutaj: [Dokumentacja MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript).`,
-                tags: [tags[0]._id]
+        const createPost = async (topic, author, content, postTags = []) => {
+            return await Post.create({
+                topicId: topic._id,
+                authorId: author._id,
+                content,
+                tags: postTags
             });
-        }
+        };
 
-        console.log('✅ Posts created (including bulk for pagination).');
+        await createPost(tJS, users['john@example.com'], 'Welcome to the JavaScript subtopic! Feel free to ask about ES2024.', [tags[0]._id]);
+        await createPost(tVue, users['john@example.com'], 'Check out the new Composition API tips.', [tags[2]._id]);
+        await createPost(tNode, users['dev_jane@example.com'], 'Native testing in Node.js 20 is actually great.', [tags[4]._id]);
+        await createPost(tAWS, users['bob@example.com'], 'AWS Lambda now supports even faster cold starts.', [tags[12]._id]);
+        await createPost(tDocker, admin, 'Multi-stage builds are a must for production images.', [tags[6]._id]);
 
-        // 6. Create interactions
-        // Add some random likes
-        for (let i = 0; i < posts.length; i++) {
-            const likeCount = Math.floor(Math.random() * 5);
-            for (let j = 0; j < likeCount; j++) {
-                const randomUser = users[Math.floor(Math.random() * users.length)];
-                try {
-                    await PostLike.create({ postId: posts[i]._id, userId: randomUser._id });
-                } catch (e) { /* ignore duplicate likes */ }
-            }
-            await Post.findByIdAndUpdate(posts[i]._id, { likeCount });
-        }
+        // Add some "Inherited Moderator" status proof posts
+        await createPost(tProgramming, mod, 'As a moderator of the entire Programming section, I welcome you.', [tags[8]._id]);
+        await createPost(tWeb, users['alice@example.com'], 'Alice here, helping organize Web discussions.', [tags[7]._id]);
 
-        // Add a block to show functionality
-        await TopicBlock.create({
-            topicId: programming._id,
-            userId: users[5]._id, // Stella
-            blockedBy: admin._id,
-            reason: 'Too many QA questions!',
-            exceptions: [subtopics[0]._id] // Still allowed in JS
-        });
+        console.log('✅ Posts created.');
 
-        console.log('✅ Interactions and blocks created.');
-
-        console.log('\n🚀 Expanded database seeding completed successfully!');
+        console.log('\n🚀 Advanced seeding completed successfully!');
+        console.log('--- Case Study ---');
+        console.log('1. Stella: Blocked in Root "Programming", but can see "JS", "Vue" and "Node" (Exceptions inherited).');
+        console.log('2. Charlie: Blocked in Root "DevOps", but can see "Cloud", "AWS" and "Azure" (Recursive exceptions).');
+        console.log('3. Jane Dev: Blocked in "Web Dev" - zero access to that tree.');
         console.log('--- Credentials ---');
         console.log('Admin: admin@progtalk.com / admin123');
-        console.log('Users (all): user123');
+        console.log('Users: user123');
         console.log('-------------------');
 
         process.exit(0);

@@ -109,16 +109,11 @@
               <!-- Subtopic Exceptions -->
               <div v-if="availableSubtopics.length > 0" class="exceptions-section">
                 <label class="section-label">Wyjątki (podtematy z dostępem):</label>
-                <div class="subtopic-checkboxes">
-                  <label v-for="sub in availableSubtopics" :key="sub._id" class="checkbox-item">
-                    <input 
-                      type="checkbox" 
-                      :value="sub._id" 
-                      v-model="blockForm.selectedExceptions"
-                    >
-                    <span>{{ sub.name }}</span>
-                  </label>
-                </div>
+                <ExceptionTree 
+                  :topics="buildExceptionTree"
+                  :selected-exceptions="blockForm.selectedExceptions"
+                  @update-selection="blockForm.selectedExceptions = $event"
+                />
                 <p class="help-text">Zaznaczone podtematy będą dostępne dla zablokowanego użytkownika</p>
               </div>
               
@@ -323,6 +318,7 @@ import authService from '../services/authService';
 import toastService from '../services/toastService';
 import Prism from 'prismjs';
 import TopicTree from '../components/TopicTree.vue';
+import ExceptionTree from '../components/ExceptionTree.vue';
 import PostCard from '../components/PostCard.vue';
 import PostCreateForm from '../components/PostCreateForm.vue';
 import ConfirmModal from '../components/ConfirmModal.vue';
@@ -387,6 +383,30 @@ const typingDisplay = computed(() => {
   if (users.length === 1) return `${users[0]} pisze...`;
   if (users.length === 2) return `${users[0]} i ${users[1]} piszą...`;
   return `${users[0]}, ${users[1]} i ${users.length - 2} innych pisze...`;
+});
+
+// Build hierarchical tree structure from flat list of subtopics
+const buildExceptionTree = computed(() => {
+  if (!availableSubtopics.value.length) return [];
+  
+  // Create a map of all topics
+  const topicMap = {};
+  availableSubtopics.value.forEach(topic => {
+    topicMap[topic._id] = { ...topic, children: [] };
+  });
+  
+  // Build the tree structure
+  const root = [];
+  availableSubtopics.value.forEach(topic => {
+    const topicNode = topicMap[topic._id];
+    if (topic.parentId && topicMap[topic.parentId]) {
+      topicMap[topic.parentId].children.push(topicNode);
+    } else {
+      root.push(topicNode);
+    }
+  });
+  
+  return root;
 });
 
 const isModerator = computed(() => {

@@ -446,7 +446,7 @@ class TopicService {
                     name: displayName,
                     avatar: isPopulated ? mod.userId.profile?.avatar : null,
                     assignedAt: mod.assignedAt,
-                    isMain: mod.isMain,
+                    isMain: isDirect && mod.isMain,
                     type: isDirect ? 'direct' : 'inherited',
                     sourceTopicId: modTopicId
                 };
