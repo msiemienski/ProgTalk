@@ -1,268 +1,54 @@
-# 🚀 ProgTalk - Społeczność Programistów
+# ProgTalk
 
-Aplikacja społecznościowa dla programistów umożliwiająca prowadzenie dyskusji technicznych w hierarchicznie zorganizowanych tematach.
+Full-stack web app for developer discussions, built as a university project and polished for a junior portfolio.
 
-## 📋 Spis Treści
+## What It Does
+- Topic-based discussions with nested topic tree
+- Role-based permissions (user, moderator, admin)
+- JWT authentication with refresh tokens
+- Real-time updates with Socket.io
+- HTTPS-ready local setup with self-signed certs
 
-- [Opis Projektu](#opis-projektu)
-- [Stack Technologiczny](#stack-technologiczny)
-- [Wymagania](#wymagania)
-- [Instalacja i Uruchomienie](#instalacja-i-uruchomienie)
-- [Struktura Projektu](#struktura-projektu)
-- [API Endpoints](#api-endpoints)
-- [Rozwój](#rozwój)
+## Screenshot
+![ProgTalk screenshot placeholder](docs/portfolio-screenshot-main.png)
 
-## 🎯 Opis Projektu
+`TODO: replace with a real screenshot of the home page (topic tree + posts feed).`
 
-ProgTalk to platforma umożliwiająca:
-- 📝 Dyskusje programistyczne w tematach i podtematach
-- 🌳 Hierarchiczną strukturę tematów (drzewo)
-- 👥 System moderatorów (główni i delegowani)
-- 💬 Wpisy z kodem, tekstem i znacznikami technologii
-- 🔐 Autoryzację JWT i system ról
-- ⚡ Real-time komunikację przez WebSocket (Socket.io)
+## Tech Stack
+- Backend: Node.js, Express, MongoDB, Mongoose, Socket.io
+- Frontend: Vue 3, Vue Router, Axios, Vite
+- DevOps: Docker, Docker Compose, HTTPS certificates
 
-## 🛠️ Stack Technologiczny
-
-### Backend
-- **Node.js** + **Express.js** - REST API
-- **MongoDB** + **Mongoose** - Baza danych
-- **Socket.io** - WebSocket (WSS)
-- **JWT** - Autoryzacja
-- **HTTPS** - Bezpieczna komunikacja
-
-### Frontend
-- **Vue.js 3** - Framework UI
-- **Vue Router** - Routing
-- **Axios** - HTTP Client
-- **Socket.io Client** - WebSocket
-- **Vite** - Build tool
-
-### DevOps
-- **Docker** + **Docker Compose** - Konteneryzacja
-- **SSL Certificates** - HTTPS/WSS (dev)
-
-## 📦 Wymagania
-
-- **Docker** (wersja 20.10+)
-- **Docker Compose** (wersja 2.0+)
-- **OpenSSL** (do generowania certyfikatów SSL)
-
-## 🚀 Instalacja i Uruchomienie
-
-### 1. Klonowanie repozytorium
-
-```bash
-git clone <repository-url>
-cd tsw_projekt
-```
-
-### 2. Konfiguracja środowiska
-
-Skopiuj plik `.env.example` do `.env`:
-
+## Quick Start (Docker)
+1. Create env file:
 ```bash
 cp .env.example .env
 ```
-
-Opcjonalnie edytuj `.env` aby zmienić domyślne ustawienia.
-
-### 3. Generowanie certyfikatów SSL
-
-**Windows (PowerShell):**
+2. Generate local certificates:
 ```powershell
 cd certs
 .\generate-certs.ps1
 ```
-
-**Linux/Mac lub WSL:**
-```bash
-cd certs
-chmod +x generate-certs.sh
-./generate-certs.sh
-```
-
-### 4. Uruchomienie aplikacji
-
+3. Run app:
 ```bash
 docker compose up --build
 ```
+4. Open:
+- App: `https://localhost:3000`
+- API health: `https://localhost:3000/api/health`
 
-Aplikacja będzie dostępna pod adresami:
-- **Frontend**: https://localhost:5173
-- **Backend API**: https://localhost:3000
-- **Health Check**: https://localhost:3000/api/health
+Note: first run may show a browser warning because certificates are self-signed.
 
-> ⚠️ **Uwaga**: Przeglądarka wyświetli ostrzeżenie o certyfikacie - to normalne dla certyfikatów self-signed. Zaakceptuj ostrzeżenie aby kontynuować.
-> ⚠️ **Uwaga**: Zaakceptuj ostrzeżenie o certyfikacie (kliknij "Zaawansowane" i "Pozwól"). W Chrome możesz też wpisać `thisisunsafe` bezpośrednio na stronie błędu.
+## Demo Accounts
+- Admin: `admin@progtalk.com` / `admin123`
+- User: `john@example.com` / `user123`
 
-### 5. Przygotowanie danych (Seeding)
-
-Aby załadować przykładowe dane do nowej bazy:
-```bash
-docker compose exec backend npm run db:seed
-```
-Dostępne konta:
-- **Admin**: `admin@progtalk.com` / `admin123`
-- **User**: `john@example.com` / `user123`
-
-### 6. Zatrzymanie aplikacji
-
-```bash
-docker compose down
+## Project Structure
+```text
+backend/   Express API + Socket.io + Mongo models/routes/services
+frontend/  Vue application source
+certs/     Local SSL certificate scripts
 ```
 
-Aby usunąć również wolumeny (dane MongoDB):
-```bash
-docker compose down -v
-```
-
-## 🛠️ Przenośne Uruchamianie (Portable Run)
-
-### Opcja A: Docker (Zalecana)
-Najprostszy sposób. Wymaga **Docker Desktop**. Gwarantuje, że wszystko (Node, MongoDB) zadziała automatycznie.
-1. Skopiuj plik `.env.example` do `.env`.
-2. Uruchom skrypt w `certs/` aby wygenerować certyfikaty.
-3. Uruchom `docker compose up --build`.
-
-### Opcja B: Ręczne (Jeśli Docker nie działa)
-Jeśli komputer nie wspiera wirtualizacji, możesz uruchomić projekt lokalnie. Wymaga **Node.js**:
-1. **Baza danych**: Upewnij się, że w `.env` masz podany `MONGODB_URI` do bazy w chmurze (np. MongoDB Atlas) lub lokalnego MongoDB.
-2. **Certyfikaty**: Uruchom skrypt w folderze `certs/`.
-3. **Backend**:
-   ```bash
-   cd backend
-   npm install
-   npm run dev
-   ```
-4. **Frontend** (w nowym terminallu):
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
-
-## 📁 Struktura Projektu
-
-```
-tsw_projekt/
-├── backend/                 # Backend Node.js/Express
-│   ├── config/             # Konfiguracja (DB, itp.)
-│   ├── routes/             # Endpointy API
-│   ├── server.js           # Główny plik serwera
-│   ├── package.json        # Zależności backend
-│   └── Dockerfile          # Docker backend
-│
-├── frontend/               # Frontend Vue 3
-│   ├── src/
-│   │   ├── components/    # Komponenty Vue
-│   │   ├── views/         # Widoki/strony
-│   │   ├── router/        # Konfiguracja routingu
-│   │   ├── services/      # Serwisy (API, itp.)
-│   │   ├── App.vue        # Główny komponent
-│   │   └── main.js        # Entry point
-│   ├── package.json       # Zależności frontend
-│   ├── vite.config.js     # Konfiguracja Vite
-│   └── Dockerfile         # Docker frontend
-│
-├── certs/                  # Certyfikaty SSL (dev)
-│   ├── generate-certs.sh  # Generator (Linux/Mac)
-│   └── generate-certs.ps1 # Generator (Windows)
-│
-├── docker-compose.yml      # Orkiestracja Docker
-├── .env.example           # Przykładowa konfiguracja
-├── .gitignore             # Git ignore
-└── README.md              # Ten plik
-```
-
-## 🔌 API Endpoints
-
-### Health Check
-```
-GET /api/health
-```
-Zwraca status serwera i połączenia z bazą danych.
-
-**Przykładowa odpowiedź:**
-```json
-{
-  "status": "OK",
-  "timestamp": "2026-01-20T01:54:12.000Z",
-  "uptime": 123.45,
-  "environment": "development",
-  "database": {
-    "connected": true,
-    "state": "connected"
-  }
-}
-```
-
-### Root Endpoint
-```
-GET /
-```
-Zwraca informacje o API.
-
-## 🔧 Rozwój
-
-### Hot Reload
-
-Zarówno backend jak i frontend wspierają hot-reload:
-- **Backend**: Nodemon automatycznie restartuje serwer przy zmianach
-- **Frontend**: Vite automatycznie odświeża przeglądarkę
-
-### Logi
-
-Aby zobaczyć logi konkretnego serwisu:
-
-```bash
-# Backend
-docker compose logs -f backend
-
-# Frontend
-docker compose logs -f frontend
-
-# MongoDB
-docker compose logs -f mongo
-```
-
-### Dostęp do MongoDB
-
-MongoDB jest dostępne na porcie `27017`:
-
-```bash
-# Połączenie przez MongoDB Compass
-mongodb://progtalk_user:progtalk_password@localhost:27017/progtalk?authSource=admin
-
-# Lub przez mongosh w kontenerze
-docker compose exec mongo mongosh -u progtalk_user -p progtalk_password
-```
-
-### Testowanie API
-
-Możesz użyć curl, Postman lub innego narzędzia:
-
-```bash
-# Health check
-curl -k https://localhost:3000/api/health
-
-# Root endpoint
-curl -k https://localhost:3000/
-```
-
-## 📝 Następne Kroki (Etapy Projektu)
-
-- [x] **Etap 0**: Fundament projektu (Docker + DevOps) ✅
-- [ ] **Etap 1**: Modele danych i autentykacja
-- [ ] **Etap 2**: System tematów i moderacji
-- [ ] **Etap 3**: Wpisy i komentarze
-- [ ] **Etap 4**: Real-time funkcjonalności
-- [ ] **Etap 5**: Panel administracyjny
-
-## 📄 Licencja
-
-Projekt edukacyjny - Technologie Sieci Web 2025/2026
-
-## 👨‍💻 Autor
-
-Projekt indywidualny TSW
+## Why This Project
+This project demonstrates practical full-stack skills: authentication, real-time communication, role-based access, secure local setup, and Docker-based deployment workflow.
