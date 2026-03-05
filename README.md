@@ -12,8 +12,6 @@ Full-stack web app for developer discussions, built as a university project and 
 ## Screenshot
 ![ProgTalk screenshot placeholder](docs/portfolio-screenshot-main.png)
 
-`TODO: replace with a real screenshot of the home page (topic tree + posts feed).`
-
 ## Tech Stack
 - Backend: Node.js, Express, MongoDB, Mongoose, Socket.io
 - Frontend: Vue 3, Vue Router, Axios, Vite
