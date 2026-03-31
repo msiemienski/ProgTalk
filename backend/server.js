@@ -20,26 +20,31 @@ const PORT = process.env.PORT || 3000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const isDevelopment = process.env.NODE_ENV !== 'production';
+const frontendUrl = process.env.FRONTEND_URL || 'https://localhost:5173';
+const corsOrigins = (process.env.CORS_ALLOWED_ORIGINS || frontendUrl)
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
 // Middleware
 app.use(helmet({
     contentSecurityPolicy: false, // Disable for development
-    hsts: process.env.NODE_ENV !== 'development', // Disable HSTS in development for self-signed certs
+    hsts: !isDevelopment, // Disable HSTS in development for self-signed certs
 }));
 
 // Allow both localhost with https and http during development when needed.
-const allowedOrigin = process.env.FRONTEND_URL || 'https://localhost:5173';
 app.use(cors({
     origin: (origin, callback) => {
         // allow requests with no origin (like mobile apps or curl)
         if (!origin) return callback(null, true);
 
         // Relaxed CORS for local network development/testing
-        if (process.env.NODE_ENV === 'development') {
+        if (isDevelopment) {
             return callback(null, true);
         }
 
-        const allowedOrigins = [allowedOrigin, 'http://localhost:5173', 'https://localhost:5173', 'http://localhost:3000', 'https://localhost:3000'];
-        if (allowedOrigins.includes(origin)) return callback(null, true);
+        if (corsOrigins.includes(origin)) return callback(null, true);
         return callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
@@ -107,7 +112,13 @@ app.use((req, res) => {
 
 // Create HTTPS server or HTTP fallback
 let server;
+const enableHttps = process.env.ENABLE_HTTPS === 'true' || (isDevelopment && process.env.ENABLE_HTTPS !== 'false');
+
 try {
+    if (!enableHttps) {
+        throw new Error('HTTPS disabled by ENABLE_HTTPS setting');
+    }
+
     // Try to load SSL certificates
     // Inside Docker certs are typically mounted to /app/certs
     const sslKeyPath = (process.env.SSL_KEY_PATH || '/app/certs/server.key').trim();
@@ -124,14 +135,20 @@ try {
 } catch (error) {
     console.warn('⚠️  SSL certificates not found, falling back to HTTP');
     console.error(`   Error details: ${error.message}`);
-    console.warn('   Run certificate generation script to enable HTTPS');
+    if (enableHttps) {
+        console.warn('   Run certificate generation script to enable HTTPS');
+    }
     server = http.createServer(app);
+}
+
+if (!isDevelopment) {
+    app.set('trust proxy', 1);
 }
 
 // Initialize Socket.io with WSS support
 const io = new Server(server, {
     cors: {
-        origin: process.env.FRONTEND_URL || 'https://localhost:5173',
+        origin: isDevelopment ? true : corsOrigins,
         credentials: true,
     },
 });

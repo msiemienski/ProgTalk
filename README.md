@@ -37,6 +37,88 @@ docker compose up --build
 
 Note: first run may show a browser warning because certificates are self-signed.
 
+## External Deployment (VPS, Not Your PC)
+Use this when you want the app online 24/7 on an external server.
+
+### 1. Prepare Production Environment File
+Create a production env file from template:
+
+```bash
+cp .env.prod.example .env.prod
+```
+
+Fill real values in `.env.prod`:
+- `FRONTEND_URL` and `CORS_ALLOWED_ORIGINS` set to your public domain
+- Strong JWT secrets
+- Production MongoDB credentials/URI
+
+### 2. Upload Project to Server
+On your VPS (Ubuntu example), clone or pull this repository:
+
+```bash
+git clone <your-repository-url>
+cd tsw_projekt
+```
+
+Then copy your `.env.prod` onto the server (do not commit it).
+
+### 3. Run Production Stack
+Start backend + mongo + reverse proxy:
+
+```bash
+docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
+```
+
+This stack includes:
+- `backend` (Node.js API + built Vue frontend)
+- `mongo` (database)
+- `nginx` (public entrypoint on port 80)
+
+### 4. Verify Deployment
+- Open `http://<your-server-ip-or-domain>`
+- Check API health at `http://<your-server-ip-or-domain>/api/health`
+- Check logs if needed:
+
+```bash
+docker compose --env-file .env.prod -f docker-compose.prod.yml logs -f
+```
+
+### 5. HTTPS (Recommended)
+Use Let's Encrypt with the included TLS stack.
+
+1. Keep HTTP stack running (`docker-compose.prod.yml`) so ACME challenge is reachable on port 80.
+2. Issue certificate (replace values with your own):
+
+```bash
+docker compose --env-file .env.prod -f docker-compose.prod.tls.yml run --rm --profile certbot certbot certonly \
+	--webroot -w /var/www/certbot \
+	-d your-domain.example \
+	--email you@example.com --agree-tos --no-eff-email
+```
+
+3. Switch to TLS stack:
+
+```bash
+docker compose --env-file .env.prod -f docker-compose.prod.yml down
+docker compose --env-file .env.prod -f docker-compose.prod.tls.yml up -d --build
+```
+
+4. Verify:
+- `https://your-domain.example`
+- `https://your-domain.example/api/health`
+
+5. Renew certificate (recommended via cron, every day):
+
+```bash
+docker compose --env-file .env.prod -f docker-compose.prod.tls.yml run --rm --profile certbot certbot renew
+docker compose --env-file .env.prod -f docker-compose.prod.tls.yml exec nginx nginx -s reload
+```
+
+### Notes
+- Your PC is not the server. It is only used to push code updates.
+- Server updates are done by pulling new commits and rerunning the production compose command.
+- Open firewall ports `80` and `443` on the VPS.
+
 ## Demo Accounts
 - Admin: `admin@progtalk.com` / `admin123`
 - User: `john@example.com` / `user123`
