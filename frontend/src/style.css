@@ -30,12 +30,19 @@
   padding: 0;
 }
 
+html {
+  /* Reserve scrollbar space to prevent horizontal jumps between short/long pages. */
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+}
+
 body {
   font-family: 'Inter', sans-serif;
   background-color: var(--bg-color);
   color: var(--text-primary);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
 }
 
 h1,

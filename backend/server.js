@@ -22,10 +22,28 @@ const __dirname = path.dirname(__filename);
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 const frontendUrl = process.env.FRONTEND_URL || 'https://localhost:5173';
-const corsOrigins = (process.env.CORS_ALLOWED_ORIGINS || frontendUrl)
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean);
+const normalizeOrigin = (value) => {
+    if (!value) return null;
+    const trimmed = value.trim().replace(/\/+$/, '');
+    try {
+        const parsed = new URL(trimmed);
+        return parsed.origin;
+    } catch {
+        return null;
+    }
+};
+
+const allowedOriginValues = [
+    ...(process.env.CORS_ALLOWED_ORIGINS || '').split(','),
+    frontendUrl,
+    process.env.RENDER_EXTERNAL_URL || '',
+];
+
+const corsOrigins = new Set(
+    allowedOriginValues
+        .map((origin) => normalizeOrigin(origin))
+        .filter(Boolean)
+);
 
 // Middleware
 app.use(helmet({
@@ -44,7 +62,8 @@ app.use(cors({
             return callback(null, true);
         }
 
-        if (corsOrigins.includes(origin)) return callback(null, true);
+        const normalizedOrigin = normalizeOrigin(origin);
+        if (normalizedOrigin && corsOrigins.has(normalizedOrigin)) return callback(null, true);
         return callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
@@ -148,7 +167,7 @@ if (!isDevelopment) {
 // Initialize Socket.io with WSS support
 const io = new Server(server, {
     cors: {
-        origin: isDevelopment ? true : corsOrigins,
+        origin: isDevelopment ? true : Array.from(corsOrigins),
         credentials: true,
     },
 });

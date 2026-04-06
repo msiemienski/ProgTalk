@@ -28,7 +28,16 @@
     
     <main class="app-main">
       <div :class="{ 'container': !isCenteredPage }">
-        <router-view />
+        <router-view v-slot="{ Component }">
+          <Suspense>
+            <component :is="Component" />
+            <template #fallback>
+              <div class="route-loading-shell" aria-live="polite" aria-busy="true">
+                <div class="route-loading-bar"></div>
+              </div>
+            </template>
+          </Suspense>
+        </router-view>
       </div>
     </main>
     
@@ -166,6 +175,32 @@ const handleLogout = async () => {
   flex: 1;
   display: flex;
   flex-direction: column;
+}
+
+.route-loading-shell {
+  min-height: 60vh;
+  display: flex;
+  align-items: flex-start;
+}
+
+.route-loading-bar {
+  margin-top: 1.25rem;
+  width: 100%;
+  height: 3px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, var(--primary-light) 0%, var(--primary-color) 50%, var(--primary-light) 100%);
+  background-size: 200% 100%;
+  animation: route-loading 1s linear infinite;
+}
+
+@keyframes route-loading {
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: 0 0;
+  }
 }
 
 .app-footer {
