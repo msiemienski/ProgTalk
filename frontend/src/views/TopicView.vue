@@ -130,7 +130,25 @@
 
       <!-- Main Content -->
       <main class="content">
-        <div v-if="loadingTopic" class="loading-state">Wczytywanie tematu...</div>
+        <div v-if="loadingTopic" class="topic-loading-shell card" aria-busy="true" aria-live="polite">
+          <div class="skeleton-line skeleton-title"></div>
+          <div class="skeleton-line skeleton-subtitle"></div>
+          <div class="skeleton-line skeleton-subtitle short"></div>
+
+          <div class="posts-loading-list compact">
+            <div v-for="i in 3" :key="`topic-shell-${i}`" class="post-skeleton card">
+              <div class="skeleton-row">
+                <div class="skeleton-avatar"></div>
+                <div class="skeleton-line-group">
+                  <div class="skeleton-line name"></div>
+                  <div class="skeleton-line meta"></div>
+                </div>
+              </div>
+              <div class="skeleton-line body"></div>
+              <div class="skeleton-line body short"></div>
+            </div>
+          </div>
+        </div>
         
         <!-- Blocked Message -->
         <div v-else-if="userAccess && !userAccess.hasAccess" class="blocked-state card">
@@ -256,7 +274,20 @@
               </div>
             </transition>
             
-            <div v-if="loadingPosts" class="loading-state">Pobieranie wpisów...</div>
+            <div v-if="loadingPosts" class="posts-loading-list" aria-busy="true">
+              <div v-for="i in 3" :key="`post-shell-${i}`" class="post-skeleton card">
+                <div class="skeleton-row">
+                  <div class="skeleton-avatar"></div>
+                  <div class="skeleton-line-group">
+                    <div class="skeleton-line name"></div>
+                    <div class="skeleton-line meta"></div>
+                  </div>
+                </div>
+                <div class="skeleton-line body"></div>
+                <div class="skeleton-line body"></div>
+                <div class="skeleton-line body short"></div>
+              </div>
+            </div>
             
             <div v-else-if="posts.length > 0" class="posts-list">
               <PostCard 
@@ -789,8 +820,8 @@ const fetchTopicData = async (id) => {
       userAccess.value = { hasAccess: true }; // Public access assumed for details, logic on posts handles others
     }
 
-    // Also fetch posts for this topic
-    fetchPosts(id);
+    // Load posts before leaving the page skeleton to keep layout stable.
+    await fetchPosts(id);
 
     // Fetch blocks if user is moderator
     if (isModerator.value) {
@@ -1061,6 +1092,93 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 2rem;
+  min-height: 70vh;
+}
+
+.topic-loading-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 70vh;
+}
+
+.posts-loading-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.posts-loading-list.compact {
+  margin-top: 0.5rem;
+}
+
+.post-skeleton {
+  padding: 1.25rem;
+}
+
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.skeleton-avatar {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  background: #e2e8f0;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.skeleton-line-group {
+  width: 40%;
+}
+
+.skeleton-line {
+  height: 0.75rem;
+  border-radius: 9999px;
+  background: #e2e8f0;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.skeleton-title {
+  width: 38%;
+  height: 1.4rem;
+}
+
+.skeleton-subtitle {
+  width: 72%;
+}
+
+.skeleton-subtitle.short {
+  width: 45%;
+}
+
+.skeleton-line.name {
+  width: 55%;
+  margin-bottom: 0.35rem;
+}
+
+.skeleton-line.meta {
+  width: 35%;
+  height: 0.6rem;
+}
+
+.skeleton-line.body {
+  width: 100%;
+  margin-bottom: 0.6rem;
+}
+
+.skeleton-line.body.short {
+  width: 78%;
+  margin-bottom: 0;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.9; }
+  50% { opacity: 0.45; }
+  100% { opacity: 0.9; }
 }
 
 .topic-header {
