@@ -17,6 +17,14 @@ Full-stack web app for developer discussions, built as a university project and 
 - Frontend: Vue 3, Vue Router, Axios, Vite
 - DevOps: Docker, Docker Compose, HTTPS certificates
 
+## Environment Files Guide
+- .env.example: root local Docker development values used with docker-compose.yml
+- backend/.env.example: backend-only local run values (if running backend directly)
+- .env.prod.example: VPS self-hosting values for docker-compose.prod.yml and TLS stack
+- .env.render.example: Render deployment variable template
+
+For Render, use only service environment variables from .env.render.example.
+
 ## Quick Start (Docker)
 1. Create env file:
 ```bash
@@ -118,6 +126,46 @@ docker compose --env-file .env.prod -f docker-compose.prod.tls.yml exec nginx ng
 - Your PC is not the server. It is only used to push code updates.
 - Server updates are done by pulling new commits and rerunning the production compose command.
 - Open firewall ports `80` and `443` on the VPS.
+
+## Simplest Render Deployment (Recommended for Beginners)
+You do not deploy frontend first for this project. Frontend is built into the backend Docker image and served by Express, so deploy one service.
+
+### Prerequisites
+- GitHub repository with this project
+- MongoDB Atlas cluster and connection URI ready
+
+### 1. Create Render service
+- New Web Service
+- Source: your GitHub repo
+- Environment: Docker
+- Dockerfile Path: backend/Dockerfile
+- Docker Build Context: .
+
+### 2. Set Render environment variables
+Copy values from .env.render.example into Render Dashboard environment settings.
+
+Required keys:
+- NODE_ENV=production
+- ENABLE_HTTPS=false
+- FRONTEND_URL=https://<your-render-url>
+- CORS_ALLOWED_ORIGINS=https://<your-render-url>
+- MONGODB_URI=<your-atlas-uri>
+- JWT_SECRET=<long-random>
+- JWT_ACCESS_SECRET=<long-random>
+- JWT_REFRESH_SECRET=<long-random>
+- JWT_ACCESS_EXPIRY=15m
+- JWT_REFRESH_EXPIRY=7d
+
+### 3. Deploy and verify
+- Trigger deploy
+- Open app URL
+- Check /api/health endpoint
+- Test login and one topic/post flow
+
+### 4. Custom domain (optional)
+- Add custom domain in Render
+- Update FRONTEND_URL and CORS_ALLOWED_ORIGINS to custom domain
+- Redeploy
 
 ## Demo Accounts
 - Admin: `admin@progtalk.com` / `admin123`
