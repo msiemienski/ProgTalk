@@ -13,7 +13,13 @@
       <!-- Sidebar with Tree -->
       <aside class="sidebar card">
         <h3>Tematy</h3>
-        <div v-if="loadingTree" class="loading-state">Wczytywanie...</div>
+        <div v-if="loadingTree" class="loading-state" aria-hidden="true">
+          <div class="tree-skeleton-line wide"></div>
+          <div class="tree-skeleton-line"></div>
+          <div class="tree-skeleton-line short"></div>
+          <div class="tree-skeleton-line"></div>
+          <div class="tree-skeleton-line medium"></div>
+        </div>
         <TopicTree 
           v-else
           :topics="tree" 
@@ -24,7 +30,13 @@
         <!-- Moderators Section -->
         <div class="moderators-section">
           <h3>Moderatorzy</h3>
-          <div class="mod-list">
+          <div v-if="loadingTopic" class="mod-loading" aria-hidden="true">
+            <div class="mod-loading-row" v-for="i in 3" :key="`mod-loading-${i}`">
+              <span class="mod-loading-dot"></span>
+              <span class="mod-loading-line"></span>
+            </div>
+          </div>
+          <div v-else class="mod-list">
             <div v-for="mod in moderators" :key="mod.userId" class="mod-item">
               <span class="mod-name" :title="mod.email">
                 {{ mod.name || mod.email.split('@')[0] }}
@@ -82,7 +94,8 @@
                   @click="editBlock(block)"
                   title="Edytuj blokadę"
                 >
-                  ✎
+                  <Pencil class="mini-action-icon" aria-hidden="true" />
+                  Edytuj
                 </button>
                 <button 
                   class="btn-icon danger" 
@@ -194,7 +207,8 @@
               <span v-if="topic.mainModeratorId">Moderator: {{ topic.mainModeratorId.profile?.name || topic.mainModeratorId.email }}</span>
               <span class="dot">•</span>
               <span class="presence-indicator" :title="'Aktualnie przeglądających: ' + activeViewers">
-                👥 {{ activeViewers }} online
+                <Users class="presence-icon" aria-hidden="true" />
+                Online: {{ activeViewers }}
               </span>
               <span class="dot">•</span>
               <span :style="{ color: socketStatus.connected ? '#10b981' : '#ef4444' }">
@@ -327,7 +341,9 @@
             </div>
 
             <div v-else class="empty-posts">
-               <div class="icon">💬</div>
+              <div class="icon" aria-hidden="true">
+                <MessageSquareText class="empty-posts-icon" />
+              </div>
                <p>W tym temacie nie ma jeszcze żadnych postów.</p>
                <p class="text-muted">Bądź pierwszy i rozpocznij dyskusję!</p>
             </div>
@@ -348,6 +364,7 @@ import api from '../services/api';
 import authService from '../services/authService';
 import toastService from '../services/toastService';
 import Prism from 'prismjs';
+import { MessageSquareText, Pencil, Users } from 'lucide-vue-next';
 import TopicTree from '../components/TopicTree.vue';
 import ExceptionTree from '../components/ExceptionTree.vue';
 import PostCard from '../components/PostCard.vue';
@@ -987,18 +1004,21 @@ watch(
 
 <style scoped>
 .topic-view {
-  padding: 1rem 0;
+  padding: 1rem 0 1.6rem;
 }
 
 .breadcrumbs {
   margin-bottom: 2rem;
-  font-size: 0.9rem;
+  font-size: 0.86rem;
   display: flex;
   align-items: center;
   flex-wrap: nowrap;
   overflow-x: auto;
   white-space: nowrap;
-  padding-bottom: 0.5rem;
+  padding: 0.45rem 0.75rem 0.55rem;
+  background: rgb(255 253 249 / 0.74);
+  border: 1px solid rgb(221 213 199 / 0.85);
+  border-radius: 999px;
   scrollbar-width: none; /* Firefox */
 }
 
@@ -1014,11 +1034,17 @@ watch(
 
 .breadcrumbs a {
   flex-shrink: 0;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.breadcrumbs a:hover {
+  color: var(--primary-color);
 }
 
 .layout-with-sidebar {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 300px 1fr;
   gap: 2rem;
   align-items: start;
 }
@@ -1030,17 +1056,46 @@ watch(
 }
 
 .sidebar {
-  padding: 1.5rem;
+  padding: 1.3rem;
   position: sticky;
   top: 1rem;
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.82), rgb(255 250 240 / 0.72));
+}
+
+.loading-state {
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.2rem 0 0.5rem;
+}
+
+.tree-skeleton-line {
+  height: 0.7rem;
+  border-radius: 999px;
+  background: #dde3ea;
+  animation: pulse 1.3s ease-in-out infinite;
+  width: 74%;
+}
+
+.tree-skeleton-line.wide {
+  width: 92%;
+}
+
+.tree-skeleton-line.medium {
+  width: 58%;
+}
+
+.tree-skeleton-line.short {
+  width: 42%;
 }
 
 .sidebar h3 {
   margin-top: 0;
-  margin-bottom: 1.5rem;
-  font-size: 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.94rem;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.08em;
   color: var(--text-muted);
 }
 
@@ -1077,43 +1132,55 @@ watch(
 
 .typing-indicator {
   font-size: 0.85rem;
-  color: var(--text-muted);
+  color: var(--primary-color);
   font-style: italic;
   margin-bottom: 0.5rem;
   padding-left: 0.5rem;
 }
 
 .presence-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   color: var(--primary-color);
   font-weight: 500;
+}
+
+.presence-icon {
+  width: 0.85rem;
+  height: 0.85rem;
+  stroke-width: 2.2;
 }
 
 .content {
   display: flex;
   flex-direction: column;
   gap: 2rem;
-  min-height: 70vh;
+  min-height: 78vh;
 }
 
 .topic-loading-shell {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  min-height: 70vh;
+  min-height: 78vh;
 }
 
 .posts-loading-list {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  min-height: 560px;
 }
 
 .posts-loading-list.compact {
   margin-top: 0.5rem;
+  min-height: 520px;
 }
 
 .post-skeleton {
   padding: 1.25rem;
+  min-height: 165px;
 }
 
 .skeleton-row {
@@ -1182,7 +1249,10 @@ watch(
 }
 
 .topic-header {
-  padding: 2.5rem;
+  padding: 2rem;
+  min-height: 210px;
+  border: 1px solid rgb(15 118 110 / 0.2);
+  background: linear-gradient(150deg, rgb(255 255 255 / 0.95), rgb(252 247 239 / 0.9));
 }
 
 .header-main {
@@ -1194,6 +1264,8 @@ watch(
 
 .header-main h1 {
   margin: 0;
+  font-family: 'Sora', sans-serif;
+  font-size: clamp(1.5rem, 3.2vw, 2.1rem);
 }
 
 .header-actions {
@@ -1235,16 +1307,18 @@ watch(
 }
 
 .description {
-  font-size: 1.1rem;
+  font-size: 1rem;
   line-height: 1.6;
-  margin-bottom: 2rem;
+  margin-bottom: 1.35rem;
+  color: var(--text-secondary);
 }
 
 .topic-stats {
   display: flex;
+  flex-wrap: wrap;
   gap: 1rem;
   color: var(--text-muted);
-  font-size: 0.9rem;
+  font-size: 0.82rem;
 }
 
 .dot {
@@ -1259,7 +1333,9 @@ watch(
 
 .subtopic-card {
   padding: 1.5rem;
+  min-height: 165px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid rgb(221 213 199 / 0.95);
 }
 
 .subtopic-card:hover {
@@ -1270,6 +1346,7 @@ watch(
 .subtopic-card h4 {
   margin-top: 0;
   margin-bottom: 0.75rem;
+  font-family: 'Sora', sans-serif;
   color: var(--primary-color);
 }
 
@@ -1277,10 +1354,12 @@ watch(
   font-size: 0.9rem;
   color: var(--text-muted);
   line-height: 1.4;
+  min-height: 3.8rem;
 }
 
 .posts-section {
   margin-top: 1rem;
+  min-height: 460px;
 }
 
 .section-header {
@@ -1292,15 +1371,60 @@ watch(
 
 .empty-posts {
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
   padding: 4rem 2rem;
-  background: #f8fafc;
+  background: #f7f3eb;
   border-radius: 12px;
-  border: 2px dashed #e2e8f0;
+  border: 2px dashed #d9d0c0;
 }
 
 .empty-posts .icon {
-  font-size: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 999px;
+  margin: 0 auto 1rem;
+  background: radial-gradient(circle at 35% 30%, rgb(15 118 110 / 0.3), rgb(15 118 110 / 0.09));
+  border: 1px solid rgb(15 118 110 / 0.4);
   margin-bottom: 1rem;
+}
+
+.empty-posts-icon {
+  width: 1.32rem;
+  height: 1.32rem;
+  color: #0f766e;
+  stroke-width: 2.2;
+}
+
+.btn-icon.secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.1rem 0.35rem;
+}
+
+.mini-action-icon {
+  width: 0.72rem;
+  height: 0.72rem;
+  stroke-width: 2.5;
+}
+
+.btn-icon.secondary:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
 }
 
 /* Moderators Section */
@@ -1308,6 +1432,36 @@ watch(
   margin-top: 2rem;
   padding-top: 1.5rem;
   border-top: 1px solid var(--border-color);
+  min-height: 150px;
+}
+
+.mod-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-height: 88px;
+}
+
+.mod-loading-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.mod-loading-dot {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 999px;
+  background: #dde3ea;
+  animation: pulse 1.3s ease-in-out infinite;
+}
+
+.mod-loading-line {
+  height: 0.6rem;
+  width: 66%;
+  border-radius: 999px;
+  background: #dde3ea;
+  animation: pulse 1.3s ease-in-out infinite;
 }
 
 .mod-list {
@@ -1507,5 +1661,22 @@ watch(
 }
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
+}
+
+@media (max-width: 900px) {
+  .content,
+  .topic-loading-shell {
+    min-height: 64vh;
+  }
+
+  .topic-header {
+    min-height: 0;
+  }
+
+  .posts-loading-list,
+  .posts-loading-list.compact,
+  .posts-section {
+    min-height: 0;
+  }
 }
 </style>

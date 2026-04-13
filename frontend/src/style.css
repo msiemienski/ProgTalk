@@ -1,27 +1,31 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap');
 
 :root {
-  --primary-color: #6366f1;
-  --primary-hover: #4f46e5;
-  --primary-light: #e0e7ff;
-  --secondary-color: #64748b;
-  --bg-color: #f8fafc;
-  --card-bg: #ffffff;
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #94a3b8;
-  --border-color: #e2e8f0;
+  --primary-color: #0f766e;
+  --primary-hover: #0f5f5a;
+  --primary-dark: #104c47;
+  --primary-light: #ccfbf1;
+  --primary-rgb: 15, 118, 110;
+  --secondary-color: #6b7280;
+  --bg-color: #f4f2ee;
+  --bg-hover: #ebe7df;
+  --card-bg: #fffdfa;
+  --text-primary: #1f2937;
+  --text-secondary: #4b5563;
+  --text-muted: #6b7280;
+  --text-color: #1f2937;
+  --border-color: #ddd5c7;
   --input-bg: #ffffff;
   --success: #10b981;
   --error: #ef4444;
   --warning: #f59e0b;
-  --radius-sm: 6px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --shadow-sm: 0 2px 4px rgb(31 41 55 / 0.06);
+  --shadow-md: 0 12px 24px rgb(31 41 55 / 0.08);
+  --shadow-lg: 0 18px 38px rgb(31 41 55 / 0.12);
+  --shadow-xl: 0 24px 56px rgb(31 41 55 / 0.14);
 }
 
 * {
@@ -37,8 +41,11 @@ html {
 }
 
 body {
-  font-family: 'Inter', sans-serif;
-  background-color: var(--bg-color);
+  font-family: 'Manrope', sans-serif;
+  background:
+    radial-gradient(circle at 85% 12%, rgb(15 118 110 / 0.12) 0%, transparent 42%),
+    radial-gradient(circle at 5% 100%, rgb(251 146 60 / 0.16) 0%, transparent 36%),
+    var(--bg-color);
   color: var(--text-primary);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -50,15 +57,15 @@ h2,
 h3,
 h4,
 .font-outfit {
-  font-family: 'Outfit', sans-serif;
-  font-weight: 700;
+  font-family: 'Sora', sans-serif;
+  font-weight: 800;
   color: var(--text-primary);
 }
 
 .container {
-  max-width: 1200px;
+  max-width: 1240px;
   margin: 0 auto;
-  padding: 0 1.5rem;
+  padding: 0 1.25rem;
 }
 
 .card {
@@ -67,10 +74,11 @@ h4,
   padding: 1.5rem;
   box-shadow: var(--shadow-md);
   border: 1px solid var(--border-color);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 }
 
 .card:hover {
+  border-color: rgb(15 118 110 / 0.26);
   box-shadow: var(--shadow-lg);
 }
 
@@ -82,34 +90,35 @@ h4,
   padding: 0.625rem 1.25rem;
   font-weight: 600;
   font-size: 0.9375rem;
-  border-radius: var(--radius-sm);
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.25s cubic-bezier(0.32, 0.72, 0, 1);
   border: 1px solid transparent;
   gap: 0.5rem;
   text-decoration: none;
 }
 
 .btn.primary {
-  background: var(--primary-color);
+  background: linear-gradient(135deg, #0f766e 0%, #115e59 100%);
   color: white;
+  box-shadow: 0 12px 22px rgb(15 118 110 / 0.24);
 }
 
 .btn.primary:hover {
-  background: var(--primary-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+  background: linear-gradient(135deg, #115e59 0%, #134e4a 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 16px 26px rgb(15 118 110 / 0.3);
 }
 
 .btn.secondary {
-  background: white;
+  background: #fffcf6;
   color: var(--text-secondary);
   border-color: var(--border-color);
 }
 
 .btn.secondary:hover {
-  background: var(--bg-color);
-  border-color: var(--text-muted);
+  background: #ffffff;
+  border-color: rgb(15 118 110 / 0.35);
 }
 
 .btn.ghost {
@@ -150,7 +159,7 @@ select {
   padding: 0.625rem 1rem;
   background-color: var(--input-bg);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
+  border-radius: 10px;
   font-family: inherit;
   font-size: 0.9375rem;
   color: var(--text-primary);
@@ -162,7 +171,7 @@ textarea:focus,
 select:focus {
   outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 4px var(--primary-light);
+  box-shadow: 0 0 0 4px rgb(15 118 110 / 0.16);
 }
 
 input::placeholder,
@@ -263,9 +272,19 @@ textarea::placeholder {
 /* Code blocks */
 code {
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  background: #f1f5f9;
+  background: #f0eee8;
   padding: 0.2rem 0.4rem;
   border-radius: 4px;
   font-size: 0.875em;
-  color: #0f172a;
+  color: #1f2937;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 0 1rem;
+  }
+
+  .card {
+    padding: 1.1rem;
+  }
 }

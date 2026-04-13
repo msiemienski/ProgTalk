@@ -8,7 +8,7 @@
         :class="toast.type"
         @click="remove(toast.id)"
       >
-        <span class="icon">{{ getIcon(toast.type) }}</span>
+        <component :is="getIconComponent(toast.type)" class="icon" aria-hidden="true" />
         <span class="message">{{ toast.message }}</span>
       </div>
     </transition-group>
@@ -16,6 +16,7 @@
 </template>
 
 <script setup>
+import { CheckCircle2, CircleAlert, Info, TriangleAlert } from 'lucide-vue-next';
 import toastService from '../services/toastService';
 
 const toasts = toastService.toasts;
@@ -24,13 +25,13 @@ const remove = (id) => {
   toastService.remove(id);
 };
 
-const getIcon = (type) => {
+const getIconComponent = (type) => {
   switch (type) {
-    case 'success': return '✅';
-    case 'error': return '❌';
-    case 'warning': return '⚠️';
-    case 'info': return 'ℹ️';
-    default: return '📢';
+    case 'success': return CheckCircle2;
+    case 'error': return CircleAlert;
+    case 'warning': return TriangleAlert;
+    case 'info': return Info;
+    default: return Info;
   }
 };
 </script>
@@ -69,7 +70,11 @@ const getIcon = (type) => {
 .toast.info { border-color: #3b82f6; background: #eff6ff; color: #1d4ed8; }
 
 .icon {
-  font-size: 1.2rem;
+  width: 1rem;
+  height: 1rem;
+  stroke-width: 2.3;
+  flex-shrink: 0;
+  opacity: 0.95;
 }
 
 /* Animations */

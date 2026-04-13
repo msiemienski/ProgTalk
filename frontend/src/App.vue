@@ -3,7 +3,8 @@
     <header class="app-header">
       <div class="container">
         <router-link to="/" class="logo">
-          <h1>🚀 ProgTalk</h1>
+          <SquareTerminal class="logo-mark" aria-hidden="true" />
+          <h1>ProgTalk</h1>
         </router-link>
         
         <nav class="main-nav">
@@ -54,6 +55,7 @@
 <script setup>
 import { useRouter, useRoute } from 'vue-router';
 import { computed } from 'vue';
+import { SquareTerminal } from 'lucide-vue-next';
 import authService from './services/authService';
 import ToastContainer from './components/ToastContainer.vue';
 
@@ -84,10 +86,10 @@ const handleLogout = async () => {
 
 <style scoped>
 .app-header {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border-color);
-  padding: 0.75rem 0;
+  background: rgb(255 253 250 / 0.86);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgb(221 213 199 / 0.88);
+  padding: 0.85rem 0;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -106,63 +108,82 @@ const handleLogout = async () => {
   gap: 0.5rem;
 }
 
+.logo-mark {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: #0f766e;
+  stroke-width: 2.2;
+}
+
 .logo h1 {
   margin: 0;
-  font-size: 1.5rem;
-  background: linear-gradient(135deg, var(--primary-color) 0%, #8b5cf6 100%);
+  font-size: 1.45rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, #0f766e 0%, #c2410c 100%);
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Sora', sans-serif;
+  font-weight: 800;
 }
 
 .main-nav {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .main-nav a {
   text-decoration: none;
-  color: var(--text-secondary);
+  color: var(--text-primary);
   font-weight: 600;
-  font-size: 0.9rem;
-  transition: color 0.2s;
+  font-size: 0.88rem;
+  padding: 0.4rem 0.65rem;
+  border-radius: 999px;
+  transition: color 0.2s, background-color 0.2s;
 }
 
 .main-nav a:hover, .main-nav a.router-link-active {
   color: var(--primary-color);
+  background: rgb(15 118 110 / 0.1);
 }
 
 .btn-link {
   background: none;
   border: none;
-  color: var(--text-color);
+  color: var(--text-primary);
   font: inherit;
   font-weight: 500;
   cursor: pointer;
-  padding: 0;
+  padding: 0.4rem 0.5rem;
+  border-radius: 999px;
+  transition: color 0.2s, background-color 0.2s;
 }
 
 .btn-link:hover {
+  background: rgb(239 68 68 / 0.08);
   color: #ef4444;
 }
 
 .admin-link {
-  color: #9333ea !important;
+  color: #b45309 !important;
 }
 
 .btn-register {
-  background: var(--primary-color);
+  background: linear-gradient(135deg, #0f766e 0%, #0f5f5a 100%);
   color: white !important;
-  padding: 0.5rem 1.25rem;
-  border-radius: var(--radius-sm);
-  box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2);
+  padding: 0.52rem 1.2rem !important;
+  border-radius: 999px !important;
+  box-shadow: 0 10px 18px rgb(15 118 110 / 0.24);
 }
 
 .btn-register:hover {
   background: var(--primary-hover);
   transform: translateY(-1px);
+  color: white;
 }
 
 .app-main {
@@ -204,10 +225,22 @@ const handleLogout = async () => {
 }
 
 .app-footer {
-  background: var(--card-bg);
-  border-top: 1px solid var(--border-color);
-  padding: 2rem 0;
+  background: linear-gradient(180deg, rgb(255 253 250 / 0.72) 0%, rgb(255 251 244 / 0.95) 100%);
+  border-top: 1px solid rgb(221 213 199 / 0.8);
+  padding: 1.8rem 0;
   text-align: center;
-  color: var(--text-muted);
+  color: #6b7280;
+}
+
+@media (max-width: 900px) {
+  .app-header .container {
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .main-nav {
+    justify-content: center;
+    row-gap: 0.4rem;
+  }
 }
 </style>

@@ -3,7 +3,7 @@
     <h2>O Projekcie</h2>
     
     <div class="card">
-      <h3>🚀 ProgTalk</h3>
+      <h3>ProgTalk</h3>
       <p>
         ProgTalk to aplikacja społecznościowa stworzona dla programistów.
         Umożliwia prowadzenie dyskusji technicznych w hierarchicznie
@@ -12,7 +12,7 @@
     </div>
     
     <div class="card">
-      <h3>🛠️ Stack Technologiczny</h3>
+      <h3>Stack Technologiczny</h3>
       <div class="tech-stack">
         <div class="tech-item">
           <h4>Backend</h4>
@@ -49,7 +49,7 @@
     </div>
     
     <div class="card">
-      <h3>📋 Główne Funkcjonalności</h3>
+      <h3>Główne Funkcjonalności</h3>
       <ul>
         <li><strong>Tematy i podtematy:</strong> Hierarchiczna struktura dyskusji</li>
         <li><strong>System moderacji:</strong> Moderatorzy główni i delegowani</li>
