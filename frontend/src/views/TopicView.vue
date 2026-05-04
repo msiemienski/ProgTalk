@@ -149,7 +149,7 @@
           <div class="skeleton-line skeleton-subtitle short"></div>
 
           <div class="posts-loading-list compact">
-            <div v-for="i in 3" :key="`topic-shell-${i}`" class="post-skeleton card">
+            <div v-for="i in pagination.limit" :key="`topic-shell-${i}`" class="post-skeleton card">
               <div class="skeleton-row">
                 <div class="skeleton-avatar"></div>
                 <div class="skeleton-line-group">
@@ -293,7 +293,7 @@
             </transition>
             
             <div v-if="loadingPosts" class="posts-loading-list" aria-busy="true">
-              <div v-for="i in 3" :key="`post-shell-${i}`" class="post-skeleton card">
+              <div v-for="i in pagination.limit" :key="`post-shell-${i}`" class="post-skeleton card">
                 <div class="skeleton-row">
                   <div class="skeleton-avatar"></div>
                   <div class="skeleton-line-group">
