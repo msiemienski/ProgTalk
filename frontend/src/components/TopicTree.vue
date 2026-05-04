@@ -89,7 +89,7 @@ const handleTopicClick = (id) => {
 }
 
 .topic-link-wrapper.active {
-  background: #eef2ff;
+  background: rgb(14 165 163 / 0.14);
   color: var(--primary-color);
   font-weight: 600;
 }

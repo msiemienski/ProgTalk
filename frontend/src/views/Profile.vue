@@ -8,6 +8,9 @@
           <div class="status-badge" :class="user.status">
             {{ user.status === 'active' ? 'Aktywny' : 'Oczekujący' }}
           </div>
+          <p v-if="user.status !== 'active'" class="pending-note">
+            Konto oczekuje na weryfikację przez administratora.
+          </p>
           <p class="email-text">{{ user.email }}</p>
         </div>
       </div>
@@ -167,6 +170,16 @@ const handleLogout = async () => {
 .email-text {
   color: var(--text-muted);
   margin-top: 0.5rem;
+}
+
+.pending-note {
+  margin-top: 0.6rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 12px;
+  background: rgb(245 158 11 / 0.12);
+  border: 1px solid rgb(245 158 11 / 0.28);
+  color: #92400e;
+  font-size: 0.9rem;
 }
 
 .status-badge {

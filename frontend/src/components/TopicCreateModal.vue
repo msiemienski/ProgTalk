@@ -79,7 +79,7 @@ const handleSubmit = async () => {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(15, 23, 42, 0.4);
+  background: rgba(15, 23, 42, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -88,7 +88,7 @@ const handleSubmit = async () => {
 }
 
 .modal-content {
-  background: white;
+  background: var(--card-bg);
   padding: 2.5rem;
   border-radius: var(--radius-lg);
   width: 95%;
@@ -107,7 +107,7 @@ const handleSubmit = async () => {
 .modal-header h3 {
   margin: 0;
   font-size: 1.5rem;
-  font-family: 'Outfit', sans-serif;
+  font-family: var(--font-display);
 }
 
 .close-btn {

@@ -52,22 +52,24 @@ const getIconComponent = (type) => {
   pointer-events: auto;
   min-width: 300px;
   padding: 1rem 1.5rem;
-  border-radius: 8px;
-  background: white;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 0.92);
+  box-shadow: var(--shadow-md);
   display: flex;
   align-items: center;
   gap: 12px;
   cursor: pointer;
   border-left: 4px solid #ccc;
+  border: 1px solid var(--border-color);
   font-size: 0.95rem;
   font-weight: 500;
+  backdrop-filter: blur(10px);
 }
 
 .toast.success { border-color: #22c55e; background: #f0fdf4; color: #15803d; }
 .toast.error { border-color: #ef4444; background: #fef2f2; color: #b91c1c; }
 .toast.warning { border-color: #f59e0b; background: #fffbeb; color: #b45309; }
-.toast.info { border-color: #3b82f6; background: #eff6ff; color: #1d4ed8; }
+.toast.info { border-color: #0ea5e9; background: #eff6ff; color: #0b4f79; }
 
 .icon {
   width: 1rem;

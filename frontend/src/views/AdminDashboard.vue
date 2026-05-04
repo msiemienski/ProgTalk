@@ -93,7 +93,7 @@ const loadingTags = ref(false);
 const creatingTag = ref(false);
 const newTag = reactive({
   name: '',
-  color: '#667eea',
+  color: '#0ea5a3',
   category: 'other'
 });
 
@@ -130,7 +130,7 @@ const createTag = async () => {
     await api.post('/tags', newTag);
     // Reset form
     newTag.name = '';
-    newTag.color = '#667eea';
+    newTag.color = '#0ea5a3';
     newTag.category = 'other';
     // Refresh list
     fetchTags();
@@ -266,9 +266,9 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 1rem;
-  background: #f8fafc;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
+  background: var(--surface-muted);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
 }
 
 .user-info {
@@ -326,8 +326,8 @@ onUnmounted(() => {
   gap: 0.5rem;
   padding: 0.5rem;
   border: 1px solid;
-  border-radius: 8px;
-  background: #fff;
+  border-radius: 12px;
+  background: var(--card-bg);
 }
 
 .tag-badge {
@@ -341,7 +341,7 @@ onUnmounted(() => {
 
 .tag-category {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--text-muted);
   text-transform: uppercase;
   font-weight: 500;
 }
@@ -351,7 +351,7 @@ onUnmounted(() => {
   border: none;
   cursor: pointer;
   font-size: 1.2rem;
-  color: #94a3b8;
+  color: var(--text-muted);
   padding: 0 0.25rem;
 }
 

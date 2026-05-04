@@ -120,8 +120,10 @@ const handleRegister = async () => {
   align-items: center;
   min-height: calc(100vh - 80px);
   padding: 2rem;
-  background: radial-gradient(circle at top left, rgba(99, 102, 241, 0.05), transparent),
-              radial-gradient(circle at bottom right, rgba(99, 102, 241, 0.05), transparent);
+  background:
+    radial-gradient(circle at top left, rgb(14 165 163 / 0.16), transparent 55%),
+    radial-gradient(circle at bottom right, rgb(249 115 22 / 0.14), transparent 60%),
+    var(--bg-color);
 }
 
 .register-card {
@@ -130,15 +132,16 @@ const handleRegister = async () => {
   padding: 3rem 2.5rem;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl);
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
+  background: var(--surface-glass);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgb(15 23 42 / 0.08);
 }
 
 h2 {
   margin-bottom: 0.75rem;
   text-align: center;
   font-size: 2rem;
-  background: linear-gradient(135deg, var(--text-primary) 0%, var(--primary-color) 100%);
+  background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-color) 100%);
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -146,7 +149,7 @@ h2 {
 
 .subtitle {
   text-align: center;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   margin-bottom: 2.5rem;
   font-size: 0.95rem;
 }
@@ -179,7 +182,7 @@ h2 {
   margin-top: 2rem;
   text-align: center;
   font-size: 0.9rem;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   padding-top: 1.5rem;
   border-top: 1px solid var(--border-color);
 }
@@ -208,6 +211,6 @@ h2 {
 
 .text-muted {
   font-size: 0.9rem;
-  color: var(--text-secondary);
+  color: var(--text-muted);
 }
 </style>

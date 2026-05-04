@@ -253,17 +253,21 @@
               <h3>Posty ({{ pagination.total }})</h3>
               <button 
                 class="btn primary btn-sm" 
-                v-if="isAuthenticated && topic.status === 'active'"
+                v-if="canPost"
                 @click="showPostForm = !showPostForm"
               >
                 {{ showPostForm ? 'Anuluj' : 'Nowy Post' }}
               </button>
             </div>
 
+            <p v-if="needsVerification" class="post-lock-message">
+              Twoje konto oczekuje na weryfikację przez administratora. Po aktywacji będziesz mógł dodawać posty.
+            </p>
+
             <!-- Post Creation Form -->
             <transition name="fade">
               <PostCreateForm 
-                v-if="showPostForm" 
+                v-if="showPostForm && canPost" 
                 :topic-id="topicId"
                 :referenced-posts="referencedPostIds"
                 @success="handleCreatePost"
@@ -403,6 +407,12 @@ const pagination = reactive({
 });
 const isAuthenticated = authService.isAuthenticated;
 const user = authService.user;
+const canPost = computed(() => {
+  return isAuthenticated.value && user.value?.status === 'active' && topic.value?.status === 'active';
+});
+const needsVerification = computed(() => {
+  return isAuthenticated.value && user.value?.status !== 'active' && topic.value?.status === 'active';
+});
 const moderators = ref([]);
 const showModModal = ref(false);
 const newModEmail = ref('');
@@ -695,6 +705,11 @@ const handleQuickBlock = async (userObj) => {
 const handleReplyToPost = (post) => {
   if (!isAuthenticated.value) {
     toastService.info('Zaloguj się, aby odpowiedzieć.');
+    return;
+  }
+
+  if (!canPost.value) {
+    toastService.info('Twoje konto oczekuje na weryfikację.');
     return;
   }
   
@@ -1367,6 +1382,16 @@ watch(
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+}
+
+.post-lock-message {
+  margin: -0.5rem 0 1.4rem;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  background: rgb(245 158 11 / 0.12);
+  border: 1px solid rgb(245 158 11 / 0.28);
+  color: #92400e;
+  font-size: 0.9rem;
 }
 
 .empty-posts {

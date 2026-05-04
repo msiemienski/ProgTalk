@@ -33,7 +33,7 @@
           </button>
         </template>
 
-        <button v-if="isAuthenticated && !post.isDeleted" class="btn btn-sm outline secondary" @click="$emit('reply', post)" title="Odpowiedz/Cytuj">
+        <button v-if="canReply" class="btn btn-sm outline secondary" @click="$emit('reply', post)" title="Odpowiedz/Cytuj">
           Odpowiedz
         </button>
         <button v-if="canManage" class="btn-icon danger" @click="$emit('delete', post._id)" title="Usuń post">
@@ -206,6 +206,9 @@ watch(() => props.post, () => {
 const user = authService.user;
 const isAdmin = authService.isAdmin;
 const isAuthenticated = authService.isAuthenticated;
+const canReply = computed(() => {
+  return isAuthenticated.value && user.value?.status === 'active' && !props.post?.isDeleted;
+});
 
 const isAuthor = computed(() => {
   if (!user.value || !props.post?.authorId) return false;
