@@ -143,22 +143,47 @@
 
       <!-- Main Content -->
       <main class="content">
-        <div v-if="loadingTopic" class="topic-loading-shell card" aria-busy="true" aria-live="polite">
-          <div class="skeleton-line skeleton-title"></div>
-          <div class="skeleton-line skeleton-subtitle"></div>
-          <div class="skeleton-line skeleton-subtitle short"></div>
+        <div v-if="loadingTopic" class="topic-loading-shell" aria-busy="true" aria-live="polite">
+          <div class="topic-header card topic-header-skeleton">
+            <div class="skeleton-line skeleton-title"></div>
+            <div class="skeleton-line skeleton-subtitle"></div>
+            <div class="skeleton-line skeleton-subtitle short"></div>
 
-          <div class="posts-loading-list compact">
-            <div v-for="i in pagination.limit" :key="`topic-shell-${i}`" class="post-skeleton card">
-              <div class="skeleton-row">
-                <div class="skeleton-avatar"></div>
-                <div class="skeleton-line-group">
-                  <div class="skeleton-line name"></div>
-                  <div class="skeleton-line meta"></div>
+            <div class="topic-stats-skeleton">
+              <div class="skeleton-line stat"></div>
+              <div class="skeleton-line stat medium"></div>
+              <div class="skeleton-line stat short"></div>
+            </div>
+          </div>
+
+          <div class="posts-section posts-section-skeleton">
+            <div class="section-header">
+              <div class="skeleton-line skeleton-posts-heading"></div>
+            </div>
+
+            <div class="posts-loading-list compact">
+              <div v-for="i in pagination.limit" :key="`topic-shell-${i}`" class="post-skeleton card">
+                <div class="skeleton-row">
+                  <div class="skeleton-avatar"></div>
+                  <div class="skeleton-line-group">
+                    <div class="skeleton-line name"></div>
+                    <div class="skeleton-line meta"></div>
+                  </div>
+                </div>
+
+                <div class="skeleton-content">
+                  <div class="skeleton-line body"></div>
+                  <div class="skeleton-line body"></div>
+                  <div class="skeleton-line body medium"></div>
+                  <div class="skeleton-line body short"></div>
+                </div>
+
+                <div class="skeleton-footer">
+                  <div class="skeleton-pill"></div>
+                  <div class="skeleton-pill short"></div>
+                  <div class="skeleton-pill tiny"></div>
                 </div>
               </div>
-              <div class="skeleton-line body"></div>
-              <div class="skeleton-line body short"></div>
             </div>
           </div>
         </div>
@@ -1170,32 +1195,60 @@ watch(
 .content {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 2rem;
   min-height: 78vh;
+  min-width: 0;
+  width: 100%;
 }
 
 .topic-loading-shell {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  align-items: stretch;
+  gap: 2rem;
   min-height: 78vh;
+  width: 100%;
+  min-width: 0;
+}
+
+.topic-header-skeleton {
+  width: 100%;
+  max-width: none;
+  min-height: 210px;
+  box-sizing: border-box;
+}
+
+.posts-section-skeleton {
+  width: 100%;
+  min-width: 0;
 }
 
 .posts-loading-list {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 1rem;
+  width: 100%;
+  min-width: 0;
   min-height: 560px;
 }
 
 .posts-loading-list.compact {
-  margin-top: 0.5rem;
+  margin-top: 0;
   min-height: 520px;
 }
 
+.post-skeleton.card {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
 .post-skeleton {
-  padding: 1.35rem 1.5rem;
-  min-height: 260px;
+  padding: 1.75rem 1.9rem;
+  min-height: 225px;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -1242,6 +1295,65 @@ watch(
 .skeleton-line.body.short {
   width: 72%;
   margin-bottom: 0;
+}
+
+.skeleton-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.skeleton-line.body.medium {
+  width: 88%;
+}
+
+.skeleton-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: auto;
+  padding-top: 0.9rem;
+  border-top: 1px solid rgb(226 232 240 / 0.8);
+}
+
+.skeleton-pill {
+  width: 5.5rem;
+  height: 1.45rem;
+  border-radius: 999px;
+  background: #e2e8f0;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.skeleton-pill.short {
+  width: 4.2rem;
+}
+
+.skeleton-pill.tiny {
+  width: 2.6rem;
+}
+
+.topic-stats-skeleton {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.skeleton-line.stat {
+  width: 7rem;
+  height: 0.75rem;
+}
+
+.skeleton-line.stat.medium {
+  width: 10rem;
+}
+
+.skeleton-line.stat.short {
+  width: 5rem;
+}
+
+.skeleton-posts-heading {
+  width: 8rem;
+  height: 1.35rem;
 }
 
 @keyframes pulse {
@@ -1681,7 +1793,8 @@ watch(
     min-height: 64vh;
   }
 
-  .topic-header {
+  .topic-header,
+  .topic-header-skeleton {
     min-height: 0;
   }
 
@@ -1689,6 +1802,10 @@ watch(
   .posts-loading-list.compact,
   .posts-section {
     min-height: 0;
+  }
+
+  .post-skeleton {
+    min-height: 210px;
   }
 }
 </style>
