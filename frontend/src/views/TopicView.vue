@@ -1194,66 +1194,53 @@ watch(
 }
 
 .post-skeleton {
-  padding: 1.25rem;
-  min-height: 165px;
+  padding: 1.35rem 1.5rem;
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .skeleton-row {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
+  gap: 0.85rem;
+  margin-bottom: 0.5rem;
 }
 
 .skeleton-avatar {
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2.6rem;
+  height: 2.6rem;
   border-radius: 9999px;
   background: #e2e8f0;
   animation: pulse 1.4s ease-in-out infinite;
+  flex-shrink: 0;
 }
 
 .skeleton-line-group {
-  width: 40%;
-}
-
-.skeleton-line {
-  height: 0.75rem;
-  border-radius: 9999px;
-  background: #e2e8f0;
-  animation: pulse 1.4s ease-in-out infinite;
-}
-
-.skeleton-title {
-  width: 38%;
-  height: 1.4rem;
-}
-
-.skeleton-subtitle {
-  width: 72%;
-}
-
-.skeleton-subtitle.short {
-  width: 45%;
+  width: 100%;
+  max-width: 280px;
 }
 
 .skeleton-line.name {
-  width: 55%;
-  margin-bottom: 0.35rem;
+  width: 65%;
+  height: 0.85rem;
+  margin-bottom: 0.45rem;
 }
 
 .skeleton-line.meta {
-  width: 35%;
-  height: 0.6rem;
+  width: 45%;
+  height: 0.65rem;
 }
 
 .skeleton-line.body {
   width: 100%;
-  margin-bottom: 0.6rem;
+  height: 0.8rem;
+  margin-bottom: 0.65rem;
 }
 
 .skeleton-line.body.short {
-  width: 78%;
+  width: 72%;
   margin-bottom: 0;
 }
 
